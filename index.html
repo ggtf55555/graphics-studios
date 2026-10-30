@@ -4,7 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>استوديوهات الإنتاج المرئي</title>
-<meta name="description" content="لوحة متابعة استوديوهات الإنتاج المرئي — من الفكرة حتى التسليم." />
+<meta name="description" content="لوحة متابعة استوديوهات المرئي الإنتاج — من الفكرة حتى التسليم." />
 <link rel="manifest" href="manifest.json" />
 <meta name="theme-color" content="#0e0f12" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -61,30 +61,19 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script>
-const STAGE_COUNT = 8;
-
-function stageBadge(stage) {
-  if (!stage) return { cls: "", label: "لم تبدأ بعد" };
-  if (stage.allDone) return { cls: "done", label: "تم التسليم" };
-  if (stage.inProgress) return { cls: "live", label: stage.name };
-  return { cls: "", label: stage.name || "لم تبدأ بعد" };
-}
-
 function renderCard(studio, stages) {
   const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
+  const total = ordered.length;
   const doneCount = ordered.filter((s) => s.status === "مكتملة").length;
   const current = ordered.find((s) => s.status !== "مكتملة");
-  const allDone = doneCount === ordered.length && ordered.length > 0;
+  const allDone = total > 0 && doneCount === total;
+  const pct = total ? Math.round((doneCount / total) * 100) : 0;
 
-  let badge;
-  if (allDone) badge = { cls: "done", label: "تم التسليم" };
-  else if (current && current.status === "قيد التنفيذ") badge = { cls: "live", label: current.name };
-  else if (current) badge = { cls: "", label: current.name };
-  else badge = { cls: "", label: "لم تبدأ بعد" };
-
-  const ticks = ordered
-    .map((s) => `<span class="${s.status === "مكتملة" ? "done" : s.status === "قيد التنفيذ" ? "live" : ""}"></span>`)
-    .join("");
+  let badge, fillCls, pctCls;
+  if (allDone) { badge = { cls: "done", label: "تم التسليم" }; fillCls = "done"; pctCls = "done"; }
+  else if (current && current.status === "قيد التنفيذ") { badge = { cls: "live", label: current.name }; fillCls = ""; pctCls = "live"; }
+  else if (current) { badge = { cls: "", label: current.name }; fillCls = ""; pctCls = ""; }
+  else { badge = { cls: "", label: "لم تبدأ بعد" }; fillCls = ""; pctCls = ""; }
 
   const metaParts = [studio.type, studio.topic].filter(Boolean);
   const bg = studio.image_url ? `style="background-image:url('${studio.image_url}')"` : "";
@@ -99,7 +88,14 @@ function renderCard(studio, stages) {
       <div class="monitor-name">${studio.name}</div>
       ${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>` : ""}
       <div class="monitor-stage"><span class="status-dot ${badge.cls}"></span> ${badge.label}</div>
-      <div class="stage-ticks">${ticks}</div>
+      <div class="progress-wrap">
+        <div class="progress-top">
+          <span class="progress-pct ${pctCls}">${pct}%</span>
+          <span class="progress-stage-label">التقدم</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill ${fillCls}" data-pct="${pct}"></div></div>
+        <div class="progress-count">${doneCount} من ${total || 8} مراحل</div>
+      </div>
     </div>
   `;
   return el;
@@ -121,6 +117,7 @@ async function loadStudios() {
 
   const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
 
+  const fills = [];
   studios.forEach((studio, i) => {
     const rows = stageStatus
       .filter((r) => r.studio_id === studio.id)
@@ -128,6 +125,19 @@ async function loadStudios() {
     const card = renderCard(studio, rows);
     card.style.animationDelay = `${i * 45}ms`;
     grid.appendChild(card);
+    fills.push(card.querySelector(".progress-fill"));
+  });
+
+  // Animate the progress bars filling in, staggered, after the cards have
+  // mounted (so the browser registers the 0% starting state first).
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      fills.forEach((fill, i) => {
+        setTimeout(() => {
+          fill.style.width = fill.dataset.pct + "%";
+        }, i * 90);
+      });
+    });
   });
 }
 
@@ -136,12 +146,23 @@ loadStudios();
 // ---------------- login modal ----------------
 const backdrop = document.getElementById("login-backdrop");
 const personSelect = document.getElementById("person");
-TEAM_ACCOUNTS.forEach((p) => {
-  const opt = document.createElement("option");
-  opt.value = p.email;
-  opt.textContent = p.name;
-  personSelect.appendChild(opt);
-});
+
+async function loadTeamForLogin() {
+  const { data, error } = await sb
+    .from("team_accounts")
+    .select("full_name, email")
+    .eq("active", true)
+    .order("sort_order");
+  if (error || !data) return;
+  personSelect.innerHTML = "";
+  data.forEach((p) => {
+    const opt = document.createElement("option");
+    opt.value = p.email;
+    opt.textContent = p.full_name;
+    personSelect.appendChild(opt);
+  });
+}
+loadTeamForLogin();
 
 document.getElementById("open-login").addEventListener("click", () => backdrop.classList.add("open"));
 document.getElementById("close-login").addEventListener("click", () => backdrop.classList.remove("open"));
