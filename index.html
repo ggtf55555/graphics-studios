@@ -26,7 +26,7 @@
 </header>
 
 <section class="hero">
-<div class="hero-bg no-image" id="hero-bg"></div>
+<div class="hero-bg" id="hero-bg" style="background-image:url('https://lh3.googleusercontent.com/d/1_6nxkLVLvatj_-EdbxvLxuZRtVMfFzgS=w1600')"></div>
 <div class="hero-scrim"></div>
 <svg class="hero-lines" viewBox="0 0 1180 560" preserveAspectRatio="none" aria-hidden="true">
 <line x1="60" y1="560" x2="340" y2="0" stroke="#c9a24b" stroke-width="1" />
@@ -88,6 +88,17 @@
 <div class="wrap">وحدة التصميم والإنتاج المرئي</div>
 </footer>
 
+<div class="lightbox-backdrop" id="lightbox-backdrop">
+<button class="lightbox-close" id="lightbox-close" aria-label="إغلاق">×</button>
+<button class="lightbox-nav lightbox-prev" id="lightbox-prev" aria-label="الصورة السابقة">‹</button>
+<div class="lightbox-stage">
+<img id="lightbox-img" src="" alt="" />
+<div class="lightbox-title" id="lightbox-title"></div>
+<div class="lightbox-counter" id="lightbox-counter"></div>
+</div>
+<button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="الصورة التالية">›</button>
+</div>
+
 <div class="modal-backdrop" id="login-backdrop">
 <div class="modal modal-wrap">
 <button class="close" id="close-login" aria-label="إغلاق">×</button>
@@ -111,7 +122,7 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script>
-function renderCard(studio, stages, index) {
+function renderCard(studio, stages, index, photos) {
 const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
 const total = ordered.length;
 const doneCount = ordered.filter((s) => s.status === "مكتملة").length;
@@ -127,14 +138,18 @@ else { badge = { cls: "", label: "لم تبدأ بعد" }; fillCls = ""; pctCls 
 
 const metaParts = [studio.type, studio.topic].filter(Boolean);
 const num = String(index + 1).padStart(2, "0");
+const hasPhotos = photos && photos.length > 0;
 
 const el = document.createElement("article");
 el.className = "monitor";
 el.dataset.type = studio.type || "";
 el.innerHTML = `
 <div class="monitor-index">${num}</div>
-<div class="monitor-screen">
-${studio.image_url ? `<img src="${studio.image_url}" alt="${studio.name}" loading="lazy" />` : '<div class="noscreen">لا توجد صورة</div>'}
+<div class="monitor-screen${hasPhotos ? " has-photos" : ""}">
+${hasPhotos
+	? `<img src="${photos[0]}" alt="${studio.name}" loading="lazy" onerror="this.style.display='none'" />
+<div class="gallery-hint"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> تكبير${photos.length > 1 ? ` · ${photos.length} صور` : ""}</div>`
+	: '<div class="noscreen"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>قيد التحضير</span></div>'}
 </div>
 <div class="monitor-body">
 <div class="monitor-name">${studio.name}</div>
@@ -150,8 +165,61 @@ ${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>`
 </div>
 </div>
 `;
+if (hasPhotos) {
+el.querySelector(".monitor-screen").addEventListener("click", () => openLightbox(photos, 0, studio.name));
+}
 return el;
 }
+
+// ---------------- lightbox (studio photo gallery) ----------------
+let lightboxPhotos = [];
+let lightboxIndex = 0;
+
+function showLightboxPhoto() {
+document.getElementById("lightbox-img").src = lightboxPhotos[lightboxIndex];
+document.getElementById("lightbox-counter").textContent =
+lightboxPhotos.length > 1 ? `${lightboxIndex + 1} / ${lightboxPhotos.length}` : "";
+const multi = lightboxPhotos.length > 1;
+document.getElementById("lightbox-prev").style.display = multi ? "" : "none";
+document.getElementById("lightbox-next").style.display = multi ? "" : "none";
+}
+
+function openLightbox(photos, startIndex, title) {
+lightboxPhotos = photos;
+lightboxIndex = startIndex;
+document.getElementById("lightbox-title").textContent = title || "";
+showLightboxPhoto();
+document.getElementById("lightbox-backdrop").classList.add("open");
+document.body.style.overflow = "hidden";
+}
+
+function closeLightbox() {
+document.getElementById("lightbox-backdrop").classList.remove("open");
+document.body.style.overflow = "";
+}
+
+function lightboxPrev() {
+lightboxIndex = (lightboxIndex - 1 + lightboxPhotos.length) % lightboxPhotos.length;
+showLightboxPhoto();
+}
+
+function lightboxNext() {
+lightboxIndex = (lightboxIndex + 1) % lightboxPhotos.length;
+showLightboxPhoto();
+}
+
+document.getElementById("lightbox-close").addEventListener("click", closeLightbox);
+document.getElementById("lightbox-prev").addEventListener("click", lightboxPrev);
+document.getElementById("lightbox-next").addEventListener("click", lightboxNext);
+document.getElementById("lightbox-backdrop").addEventListener("click", (e) => {
+if (e.target.id === "lightbox-backdrop") closeLightbox();
+});
+document.addEventListener("keydown", (e) => {
+if (!document.getElementById("lightbox-backdrop").classList.contains("open")) return;
+if (e.key === "Escape") closeLightbox();
+else if (e.key === "ArrowRight") lightboxPrev();
+else if (e.key === "ArrowLeft") lightboxNext();
+});
 
 function renderFilters(types) {
 const wrap = document.getElementById("studio-filters");
@@ -173,11 +241,12 @@ card.style.display = !type || card.dataset.type === type ? "" : "none";
 
 async function loadStudios() {
 const grid = document.getElementById("studio-grid");
-const [{ data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: stages, error: e3 }] =
+const [{ data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: stages, error: e3 }, { data: photoRows, error: e4 }] =
 await Promise.all([
 sb.from("studios").select("*").order("sort_order"),
 sb.from("studio_stage_status").select("studio_id, status, stage_id"),
 sb.from("pipeline_stages").select("id, name, sort_order"),
+sb.from("studio_photos").select("studio_id, storage_path, sort_order").order("sort_order"),
 ]);
 
 if (e1 || e2 || e3) {
@@ -187,6 +256,14 @@ return;
 
 const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
 const totalStageCount = stages.length;
+
+const photosByStudio = {};
+if (!e4 && photoRows) {
+photoRows.forEach((row) => {
+const url = sb.storage.from("studio-images").getPublicUrl(row.storage_path).data.publicUrl;
+(photosByStudio[row.studio_id] ||= []).push(url);
+});
+}
 
 let doneTotal = 0;
 let sumTotal = 0;
@@ -205,7 +282,11 @@ sumTotal += rows.length || totalStageCount;
 if (inProgress) liveCount += 1;
 if (studio.type && !types.includes(studio.type)) types.push(studio.type);
 
-const card = renderCard(studio, rows, i);
+const photos = (photosByStudio[studio.id] && photosByStudio[studio.id].length)
+? photosByStudio[studio.id]
+: (studio.image_url ? [studio.image_url] : []);
+
+const card = renderCard(studio, rows, i, photos);
 card.style.animationDelay = `${i * 45}ms`;
 grid.appendChild(card);
 fills.push(card.querySelector(".progress-fill"));

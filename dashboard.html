@@ -533,10 +533,11 @@ async function loadStudiosAdmin() {
 const list = document.getElementById("studios-admin-list");
 const emptyMsg = document.getElementById("studios-admin-empty");
 
-const [stages, { data: studios, error: e1 }, { data: stageStatus, error: e2 }] = await Promise.all([
+const [stages, { data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: photoRows, error: e3 }] = await Promise.all([
 loadPipelineStages(),
 sb.from("studios").select("*").order("sort_order"),
 sb.from("studio_stage_status").select("id, studio_id, stage_id, status"),
+sb.from("studio_photos").select("id, studio_id, storage_path, sort_order").order("sort_order"),
 ]);
 
 if (e1 || e2 || !studios) {
@@ -553,11 +554,25 @@ emptyMsg.style.display = "none";
 list.innerHTML = "";
 studios.forEach((studio) => {
 const rows = stageStatus.filter((r) => r.studio_id === studio.id);
-list.appendChild(renderStudioAdminCard(studio, stages, rows));
+const photos = e3 ? [] : (photoRows || []).filter((p) => p.studio_id === studio.id);
+list.appendChild(renderStudioAdminCard(studio, stages, rows, photos));
 });
 }
 
-function renderStudioAdminCard(studio, stages, stageRows) {
+function renderPhotosGridHtml(photos) {
+if (!photos.length) return `<p class="studio-photos-empty">لا توجد صور بعد.</p>`;
+return photos.map((p) => {
+const url = sb.storage.from("studio-images").getPublicUrl(p.storage_path).data.publicUrl;
+return `
+<div class="studio-photo-thumb">
+<img src="${url}" alt="" loading="lazy" />
+<button type="button" class="studio-photo-delete" data-photo-id="${p.id}" data-path="${escapeHtml(p.storage_path)}" title="حذف">×</button>
+</div>
+`;
+}).join("");
+}
+
+function renderStudioAdminCard(studio, stages, stageRows, photos) {
 const statusByStage = Object.fromEntries(stageRows.map((r) => [r.stage_id, r.status]));
 const doneCount = stages.filter((s) => statusByStage[s.id] === "مكتملة").length;
 const metaParts = [studio.type, studio.topic].filter(Boolean);
@@ -572,10 +587,21 @@ ${metaParts.length ? `<div class="studio-admin-meta">${escapeHtml(metaParts.join
 <div class="studio-admin-meta">${doneCount} من ${stages.length} مراحل مكتملة</div>
 </div>
 <div class="studio-admin-actions">
+<button class="btn btn-sm studio-photos-toggle">صور الاستوديو (${photos.length})</button>
 <button class="btn btn-sm studio-stages-toggle">مراحل الإنتاج</button>
 <button class="btn btn-sm studio-edit-toggle">تعديل</button>
 <button class="btn btn-sm studio-delete-btn">حذف</button>
 </div>
+</div>
+
+<div class="studio-photos-editor">
+<div class="studio-photos-grid">${renderPhotosGridHtml(photos)}</div>
+<div class="studio-photos-controls">
+<input type="file" accept="image/*" class="studio-photo-input" style="display:none" />
+<button type="button" class="btn btn-sm studio-photo-add-btn" ${photos.length >= 5 ? "disabled" : ""}>+ إضافة صورة</button>
+<span class="hint">${photos.length} من 5 صور</span>
+</div>
+<p class="studio-photo-error">تعذّر رفع الصورة. تحقق من نوع الملف وحجمه.</p>
 </div>
 
 <div class="studio-edit-form">
@@ -628,6 +654,53 @@ card.querySelector(".studio-edit-form").classList.toggle("open");
 
 card.querySelector(".studio-stages-toggle").addEventListener("click", () => {
 card.querySelector(".stage-editor").classList.toggle("open");
+});
+
+card.querySelector(".studio-photos-toggle").addEventListener("click", () => {
+card.querySelector(".studio-photos-editor").classList.toggle("open");
+});
+
+const photoFileInput = card.querySelector(".studio-photo-input");
+const photoAddBtn = card.querySelector(".studio-photo-add-btn");
+const photoErrorEl = card.querySelector(".studio-photo-error");
+
+photoAddBtn.addEventListener("click", () => photoFileInput.click());
+
+photoFileInput.addEventListener("change", async () => {
+const file = photoFileInput.files[0];
+photoFileInput.value = "";
+if (!file) return;
+photoErrorEl.classList.remove("show");
+photoAddBtn.disabled = true;
+photoAddBtn.textContent = "جارِ الرفع…";
+try {
+const ext = (file.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+const path = `${studio.id}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+const { error: upErr } = await sb.storage.from("studio-images").upload(path, file, { cacheControl: "3600", upsert: false });
+if (upErr) throw upErr;
+const nextSort = photos.length ? Math.max(...photos.map((p) => p.sort_order || 0)) + 1 : 0;
+const { error: insErr } = await sb.from("studio_photos").insert({ studio_id: studio.id, storage_path: path, sort_order: nextSort });
+if (insErr) { await sb.storage.from("studio-images").remove([path]); throw insErr; }
+loadStudiosAdmin();
+} catch (err) {
+photoErrorEl.textContent = (err && err.message && err.message.includes("at most 5"))
+? "لا يمكن إضافة أكثر من 5 صور لهذا الاستوديو."
+: "تعذّر رفع الصورة. تحقق من نوع الملف وحجمه.";
+photoErrorEl.classList.add("show");
+photoAddBtn.disabled = false;
+photoAddBtn.textContent = "+ إضافة صورة";
+}
+});
+
+card.querySelectorAll(".studio-photo-delete").forEach((btn) => {
+btn.addEventListener("click", async () => {
+if (!confirm("حذف هذه الصورة؟")) return;
+const photoId = btn.dataset.photoId;
+const path = btn.dataset.path;
+await sb.storage.from("studio-images").remove([path]);
+await sb.from("studio_photos").delete().eq("id", photoId);
+loadStudiosAdmin();
+});
 });
 
 card.querySelector(".studio-save-btn").addEventListener("click", async () => {
