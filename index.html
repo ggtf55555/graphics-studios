@@ -15,152 +15,281 @@
 <body>
 
 <header class="site-header">
-  <div class="wrap">
-    <a class="brand" href="index.html"><span class="dot"></span> استوديوهات الإنتاج</a>
-    <button class="btn" id="open-login">دخول الفريق</button>
-  </div>
+<div class="wrap">
+<a class="brand" href="index.html"><span class="dot"></span> استوديوهات الإنتاج</a>
+<nav class="site-nav">
+<a href="#studios">الاستوديوهات</a>
+<a href="#team">الفريق</a>
+</nav>
+<button class="btn" id="open-login">دخول الفريق</button>
+</div>
 </header>
 
 <section class="hero">
-  <div class="wrap">
-    <h1 class="display">استوديوهات الإنتاج المرئي</h1>
-    <p>كل استوديو يمر بثماني مراحل إنتاج، من تحديد الثيمة حتى التسليم. هذه نظرة حيّة على ما يُصنع الآن.</p>
-  </div>
+<div class="hero-bg no-image" id="hero-bg"></div>
+<div class="hero-scrim"></div>
+<svg class="hero-lines" viewBox="0 0 1180 560" preserveAspectRatio="none" aria-hidden="true">
+<line x1="60" y1="560" x2="340" y2="0" stroke="#c9a24b" stroke-width="1" />
+<line x1="140" y1="560" x2="420" y2="0" stroke="#c9a24b" stroke-width="1" />
+<line x1="1020" y1="0" x2="1180" y2="260" stroke="#3fa7a0" stroke-width="1" />
+</svg>
+<div class="wrap hero-inner">
+<div class="eyebrow">إنتاج افتراضي · XR / AR · زمن حقيقي</div>
+<h1 class="display">استوديوهات الإنتاج المرئي</h1>
+<p>كل استوديو يمر بثماني مراحل إنتاج، من تحديد الثيمة حتى التسليم. هذه نظرة حيّة على ما يُصنع الآن.</p>
+<div class="hero-actions">
+<a href="#studios" class="btn btn-gold">استكشف الاستوديوهات</a>
+<a href="#team" class="btn btn-ghost">تعرّف على الفريق</a>
+</div>
+</div>
+<div class="hero-tag">UNREAL ENGINE · VIRTUAL PRODUCTION · XR / AR</div>
 </section>
 
-<section class="grid-section">
-  <div class="wrap">
-    <div class="grid" id="studio-grid" aria-live="polite"></div>
-  </div>
+<section class="stat-strip">
+<div class="wrap">
+<div class="stat-row" id="stat-row">
+<div class="stat-cell"><div class="stat-num" id="stat-studios">—</div><div class="stat-label">استوديو فعّال</div></div>
+<div class="stat-cell"><div class="stat-num" id="stat-done">—</div><div class="stat-label">مرحلة مكتملة</div></div>
+<div class="stat-cell"><div class="stat-num" id="stat-live">—</div><div class="stat-label">شغالة الحين</div></div>
+<div class="stat-cell"><div class="stat-num" id="stat-pct">—</div><div class="stat-label">نسبة الإنجاز الكلية</div></div>
+</div>
+</div>
+</section>
+
+<section class="grid-section" id="studios">
+<div class="wrap">
+<div class="section-head">
+<div>
+<div class="section-eyebrow"><span class="num">01</span> الاستوديوهات</div>
+<h2 class="section-title">ما يُصنع الآن</h2>
+<p class="section-sub">متابعة حيّة لكل استوديو ومراحل إنتاجه الثمانية.</p>
+</div>
+<span class="tech-tag">UNREAL ENGINE · XR / AR</span>
+</div>
+<div class="studio-filters" id="studio-filters"></div>
+<div class="grid" id="studio-grid" aria-live="polite"></div>
+</div>
+</section>
+
+<section class="team-section" id="team">
+<div class="wrap">
+<div class="section-head">
+<div>
+<div class="section-eyebrow"><span class="num">02</span> الفريق</div>
+<h2 class="section-title">الفريق وراء المشهد</h2>
+<p class="section-sub">الأشخاص الذين يحوّلون الفكرة إلى مشهد جاهز للتسليم.</p>
+</div>
+</div>
+<div class="team-grid" id="team-grid"></div>
+</div>
 </section>
 
 <footer class="site-footer">
-  <div class="wrap">وحدة التصميم والإنتاج المرئي</div>
+<div class="wrap">وحدة التصميم والإنتاج المرئي</div>
 </footer>
 
 <div class="modal-backdrop" id="login-backdrop">
-  <div class="modal modal-wrap">
-    <button class="close" id="close-login" aria-label="إغلاق">×</button>
-    <h2>دخول الفريق</h2>
-    <p class="hint">اختر اسمك وأدخل الرمز الخاص بك.</p>
-    <form id="login-form">
-      <div class="field">
-        <label for="person">الاسم</label>
-        <select id="person" required></select>
-      </div>
-      <div class="field">
-        <label for="pin">الرمز</label>
-        <input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" required />
-      </div>
-      <p class="error" id="login-error">الاسم أو الرمز غير صحيح.</p>
-      <button type="submit" class="btn btn-gold btn-block" id="login-submit">دخول</button>
-    </form>
-  </div>
+<div class="modal modal-wrap">
+<button class="close" id="close-login" aria-label="إغلاق">×</button>
+<h2>دخول الفريق</h2>
+<p class="hint">اختر اسمك وأدخل الرمز الخاص بك.</p>
+<form id="login-form">
+<div class="field">
+<label for="person">الاسم</label>
+<select id="person" required></select>
+</div>
+<div class="field">
+<label for="pin">الرمز</label>
+<input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" required />
+</div>
+<p class="error" id="login-error">الاسم أو الرمز غير صحيح.</p>
+<button type="submit" class="btn btn-gold btn-block" id="login-submit">دخول</button>
+</form>
+</div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script>
-function renderCard(studio, stages) {
-  const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
-  const total = ordered.length;
-  const doneCount = ordered.filter((s) => s.status === "مكتملة").length;
-  const current = ordered.find((s) => s.status !== "مكتملة");
-  const allDone = total > 0 && doneCount === total;
-  const pct = total ? Math.round((doneCount / total) * 100) : 0;
+function renderCard(studio, stages, index) {
+const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
+const total = ordered.length;
+const doneCount = ordered.filter((s) => s.status === "مكتملة").length;
+const current = ordered.find((s) => s.status !== "مكتملة");
+const allDone = total > 0 && doneCount === total;
+const pct = total ? Math.round((doneCount / total) * 100) : 0;
 
-  let badge, fillCls, pctCls;
-  if (allDone) { badge = { cls: "done", label: "تم التسليم" }; fillCls = "done"; pctCls = "done"; }
-  else if (current && current.status === "قيد التنفيذ") { badge = { cls: "live", label: current.name }; fillCls = ""; pctCls = "live"; }
-  else if (current) { badge = { cls: "", label: current.name }; fillCls = ""; pctCls = ""; }
-  else { badge = { cls: "", label: "لم تبدأ بعد" }; fillCls = ""; pctCls = ""; }
+let badge, fillCls, pctCls;
+if (allDone) { badge = { cls: "done", label: "تم التسليم" }; fillCls = "done"; pctCls = "done"; }
+else if (current && current.status === "قيد التنفيذ") { badge = { cls: "live", label: current.name }; fillCls = ""; pctCls = "live"; }
+else if (current) { badge = { cls: "", label: current.name }; fillCls = ""; pctCls = ""; }
+else { badge = { cls: "", label: "لم تبدأ بعد" }; fillCls = ""; pctCls = ""; }
 
-  const metaParts = [studio.type, studio.topic].filter(Boolean);
-  const bg = studio.image_url ? `style="background-image:url('${studio.image_url}')"` : "";
+const metaParts = [studio.type, studio.topic].filter(Boolean);
+const num = String(index + 1).padStart(2, "0");
 
-  const el = document.createElement("article");
-  el.className = "monitor";
-  el.innerHTML = `
-    <div class="monitor-screen" ${bg}>
-      ${studio.image_url ? "" : '<div class="noscreen">لا توجد صورة</div>'}
-    </div>
-    <div class="monitor-body">
-      <div class="monitor-name">${studio.name}</div>
-      ${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>` : ""}
-      <div class="monitor-stage"><span class="status-dot ${badge.cls}"></span> ${badge.label}</div>
-      <div class="progress-wrap">
-        <div class="progress-top">
-          <span class="progress-pct ${pctCls}">${pct}%</span>
-          <span class="progress-stage-label">التقدم</span>
-        </div>
-        <div class="progress-track"><div class="progress-fill ${fillCls}" data-pct="${pct}"></div></div>
-        <div class="progress-count">${doneCount} من ${total || 8} مراحل</div>
-      </div>
-    </div>
-  `;
-  return el;
+const el = document.createElement("article");
+el.className = "monitor";
+el.dataset.type = studio.type || "";
+el.innerHTML = `
+<div class="monitor-index">${num}</div>
+<div class="monitor-screen">
+${studio.image_url ? `<img src="${studio.image_url}" alt="${studio.name}" loading="lazy" />` : '<div class="noscreen">لا توجد صورة</div>'}
+</div>
+<div class="monitor-body">
+<div class="monitor-name">${studio.name}</div>
+${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>` : ""}
+<div class="monitor-stage"><span class="status-dot ${badge.cls}"></span> ${badge.label}</div>
+<div class="progress-wrap">
+<div class="progress-top">
+<span class="progress-pct ${pctCls}">${pct}%</span>
+<span class="progress-stage-label">التقدم</span>
+</div>
+<div class="progress-track"><div class="progress-fill ${fillCls}" data-pct="${pct}"></div></div>
+<div class="progress-count">${doneCount} من ${total || 8} مراحل</div>
+</div>
+</div>
+`;
+return el;
+}
+
+function renderFilters(types) {
+const wrap = document.getElementById("studio-filters");
+const all = ["الكل", ...types];
+wrap.innerHTML = all
+.map((t, i) => `<button type="button" class="filter-chip${i === 0 ? " active" : ""}" data-type="${i === 0 ? "" : t}">${t}</button>`)
+.join("");
+wrap.querySelectorAll(".filter-chip").forEach((chip) => {
+chip.addEventListener("click", () => {
+wrap.querySelectorAll(".filter-chip").forEach((c) => c.classList.remove("active"));
+chip.classList.add("active");
+const type = chip.dataset.type;
+document.querySelectorAll("#studio-grid .monitor").forEach((card) => {
+card.style.display = !type || card.dataset.type === type ? "" : "none";
+});
+});
+});
 }
 
 async function loadStudios() {
-  const grid = document.getElementById("studio-grid");
-  const [{ data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: stages, error: e3 }] =
-    await Promise.all([
-      sb.from("studios").select("*").order("sort_order"),
-      sb.from("studio_stage_status").select("studio_id, status, stage_id"),
-      sb.from("pipeline_stages").select("id, name, sort_order"),
-    ]);
+const grid = document.getElementById("studio-grid");
+const [{ data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: stages, error: e3 }] =
+await Promise.all([
+sb.from("studios").select("*").order("sort_order"),
+sb.from("studio_stage_status").select("studio_id, status, stage_id"),
+sb.from("pipeline_stages").select("id, name, sort_order"),
+]);
 
-  if (e1 || e2 || e3) {
-    grid.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات حالياً.</p>`;
-    return;
-  }
+if (e1 || e2 || e3) {
+grid.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات حالياً.</p>`;
+return;
+}
 
-  const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
+const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
+const totalStageCount = stages.length;
 
-  const fills = [];
-  studios.forEach((studio, i) => {
-    const rows = stageStatus
-      .filter((r) => r.studio_id === studio.id)
-      .map((r) => ({ ...stageById[r.stage_id], status: r.status }));
-    const card = renderCard(studio, rows);
-    card.style.animationDelay = `${i * 45}ms`;
-    grid.appendChild(card);
-    fills.push(card.querySelector(".progress-fill"));
-  });
+let doneTotal = 0;
+let sumTotal = 0;
+let liveCount = 0;
 
-  // Animate the progress bars filling in, staggered, after the cards have
-  // mounted (so the browser registers the 0% starting state first).
-  requestAnimationFrame(() => {
-    requestAnimationFrame(() => {
-      fills.forEach((fill, i) => {
-        setTimeout(() => {
-          fill.style.width = fill.dataset.pct + "%";
-        }, i * 90);
-      });
-    });
-  });
+const fills = [];
+const types = [];
+studios.forEach((studio, i) => {
+const rows = stageStatus
+.filter((r) => r.studio_id === studio.id)
+.map((r) => ({ ...stageById[r.stage_id], status: r.status }));
+const done = rows.filter((r) => r.status === "مكتملة").length;
+const inProgress = rows.some((r) => r.status === "قيد التنفيذ");
+doneTotal += done;
+sumTotal += rows.length || totalStageCount;
+if (inProgress) liveCount += 1;
+if (studio.type && !types.includes(studio.type)) types.push(studio.type);
+
+const card = renderCard(studio, rows, i);
+card.style.animationDelay = `${i * 45}ms`;
+grid.appendChild(card);
+fills.push(card.querySelector(".progress-fill"));
+});
+
+renderFilters(types);
+
+document.getElementById("stat-studios").textContent = studios.length;
+document.getElementById("stat-done").textContent = doneTotal;
+document.getElementById("stat-live").textContent = liveCount;
+document.getElementById("stat-pct").textContent = sumTotal ? Math.round((doneTotal / sumTotal) * 100) + "%" : "0%";
+
+// Animate the progress bars filling in, staggered, after the cards have
+// mounted (so the browser registers the 0% starting state first).
+requestAnimationFrame(() => {
+requestAnimationFrame(() => {
+fills.forEach((fill, i) => {
+setTimeout(() => {
+fill.style.width = fill.dataset.pct + "%";
+}, i * 90);
+});
+});
+});
 }
 
 loadStudios();
+
+// ---------------- team showcase ----------------
+const AVATAR_COLORS = ["var(--gold)", "var(--teal)"];
+
+async function loadTeamShowcase() {
+const teamGrid = document.getElementById("team-grid");
+const { data, error } = await sb
+.from("team_accounts")
+.select("full_name, role, active")
+.eq("active", true)
+.order("sort_order");
+
+if (error || !data || !data.length) {
+teamGrid.innerHTML = `<p class="team-empty">لا يوجد أعضاء فريق معروضون حالياً.</p>`;
+return;
+}
+
+teamGrid.innerHTML = "";
+data.forEach((member, i) => {
+const num = String(i + 1).padStart(2, "0");
+const initial = (member.full_name || "؟").trim().charAt(0);
+const isAdmin = member.full_name === "الإدارة";
+const role = member.role || (isAdmin ? "إدارة النظام" : "عضو الفريق");
+const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+
+const card = document.createElement("article");
+card.className = "team-card";
+card.style.animationDelay = `${i * 45}ms`;
+card.innerHTML = `
+<div class="team-card-index">${num}</div>
+<div class="team-avatar" style="background:${color}">${initial}</div>
+<div class="team-name">${member.full_name}</div>
+<div class="team-role">${role}</div>
+`;
+teamGrid.appendChild(card);
+});
+}
+
+loadTeamShowcase();
 
 // ---------------- login modal ----------------
 const backdrop = document.getElementById("login-backdrop");
 const personSelect = document.getElementById("person");
 
 async function loadTeamForLogin() {
-  const { data, error } = await sb
-    .from("team_accounts")
-    .select("full_name, email")
-    .eq("active", true)
-    .order("sort_order");
-  if (error || !data) return;
-  personSelect.innerHTML = "";
-  data.forEach((p) => {
-    const opt = document.createElement("option");
-    opt.value = p.email;
-    opt.textContent = p.full_name;
-    personSelect.appendChild(opt);
-  });
+const { data, error } = await sb
+.from("team_accounts")
+.select("full_name, email")
+.eq("active", true)
+.order("sort_order");
+if (error || !data) return;
+personSelect.innerHTML = "";
+data.forEach((p) => {
+const opt = document.createElement("option");
+opt.value = p.email;
+opt.textContent = p.full_name;
+personSelect.appendChild(opt);
+});
 }
 loadTeamForLogin();
 
@@ -169,24 +298,24 @@ document.getElementById("close-login").addEventListener("click", () => backdrop.
 backdrop.addEventListener("click", (e) => { if (e.target === backdrop) backdrop.classList.remove("open"); });
 
 document.getElementById("login-form").addEventListener("submit", async (e) => {
-  e.preventDefault();
-  const email = personSelect.value;
-  const pin = document.getElementById("pin").value.trim();
-  const errorEl = document.getElementById("login-error");
-  const submitBtn = document.getElementById("login-submit");
-  errorEl.classList.remove("show");
-  submitBtn.disabled = true;
-  submitBtn.textContent = "جارِ الدخول…";
+e.preventDefault();
+const email = personSelect.value;
+const pin = document.getElementById("pin").value.trim();
+const errorEl = document.getElementById("login-error");
+const submitBtn = document.getElementById("login-submit");
+errorEl.classList.remove("show");
+submitBtn.disabled = true;
+submitBtn.textContent = "جارِ الدخول…";
 
-  const { error } = await signInWithPin(email, pin);
+const { error } = await signInWithPin(email, pin);
 
-  if (error) {
-    errorEl.classList.add("show");
-    submitBtn.disabled = false;
-    submitBtn.textContent = "دخول";
-    return;
-  }
-  window.location.href = "dashboard.html";
+if (error) {
+errorEl.classList.add("show");
+submitBtn.disabled = false;
+submitBtn.textContent = "دخول";
+return;
+}
+window.location.href = "dashboard.html";
 });
 </script>
 </body>
