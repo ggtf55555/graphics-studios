@@ -1,0 +1,16 @@
+{
+  "name": "استوديوهات الإنتاج المرئي",
+  "short_name": "الاستوديوهات",
+  "description": "متابعة استوديوهات الإنتاج المرئي وتوزيع المهام",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0e0f12",
+  "theme_color": "#0e0f12",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
