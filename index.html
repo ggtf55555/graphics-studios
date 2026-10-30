@@ -122,6 +122,13 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script>
+function handleCardImgError(img) {
+const screen = img.closest(".monitor-screen");
+if (!screen) return;
+screen.classList.remove("has-photos");
+screen.innerHTML = '<div class="noscreen"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>قيد التحضير</span></div>';
+}
+
 function renderCard(studio, stages, index, photos) {
 const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
 const total = ordered.length;
@@ -147,7 +154,7 @@ el.innerHTML = `
 <div class="monitor-index">${num}</div>
 <div class="monitor-screen${hasPhotos ? " has-photos" : ""}">
 ${hasPhotos
-	? `<img src="${photos[0]}" alt="${studio.name}" loading="lazy" onerror="this.style.display='none'" />
+	? `<img src="${photos[0]}" alt="${studio.name}" loading="lazy" onerror="handleCardImgError(this)" />
 <div class="gallery-hint"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> تكبير${photos.length > 1 ? ` · ${photos.length} صور` : ""}</div>`
 	: '<div class="noscreen"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg><span>قيد التحضير</span></div>'}
 </div>
@@ -166,7 +173,11 @@ ${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>`
 </div>
 `;
 if (hasPhotos) {
-el.querySelector(".monitor-screen").addEventListener("click", () => openLightbox(photos, 0, studio.name));
+const screenEl = el.querySelector(".monitor-screen");
+screenEl.addEventListener("click", () => {
+if (!screenEl.classList.contains("has-photos")) return;
+openLightbox(photos, 0, studio.name);
+});
 }
 return el;
 }
