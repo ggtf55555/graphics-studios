@@ -8,19 +8,13 @@ const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, 
   auth: { persistSession: true, autoRefreshToken: true },
 });
 
-// Known team accounts. Each person logs in with their name + a 4-digit PIN;
-// we map that to a real (internal, non-deliverable) email + a Supabase
-// password derived from the PIN, since Supabase Auth needs an email format
-// identifier and a password of reasonable length under the hood.
-const TEAM_ACCOUNTS = [
-  { name: "عبد الله", email: "abdullah@graphics-studios.local" },
-  { name: "علي فاضل", email: "ali-fadhel@graphics-studios.local" },
-  { name: "شيخ فاضل", email: "sheikh-fadhel@graphics-studios.local" },
-  { name: "احمد الطباطبائي", email: "ahmed-tabatabai@graphics-studios.local" },
-  { name: "مرتضى جيزاني", email: "murtadha-jizani@graphics-studios.local" },
-  { name: "محمد عقيل", email: "mohammed-aqeel@graphics-studios.local" },
-  { name: "الإدارة", email: "admin@graphics-studios.local" },
-];
+// Each person logs in with their name + a 4-digit PIN; we map that to a real
+// (internal, non-deliverable) email + a Supabase password derived from the
+// PIN, since Supabase Auth needs an email format identifier and a password
+// of reasonable length under the hood. The name/email directory itself
+// lives in the `team_accounts` table (publicly readable, admin-writable) so
+// the admin can rename or add team members from the dashboard without a
+// code deploy — see index.html's loadTeamForLogin().
 
 function pinToPassword(pin) {
   return (pin + pin).slice(0, 8);
