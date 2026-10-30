@@ -468,13 +468,43 @@ a { color: inherit; }
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
   color: var(--text-faint);
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
   background:
     repeating-linear-gradient(135deg, #15161a 0 2px, #111216 2px 8px);
 }
+
+.monitor-screen .noscreen svg { opacity: 0.55; }
+
+.monitor-screen.has-photos { cursor: pointer; }
+
+.monitor-screen .gallery-hint {
+  position: absolute;
+  left: 10px;
+  bottom: 10px;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  background: rgba(8, 9, 11, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--text);
+  font-size: 0.74rem;
+  letter-spacing: 0.02em;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.monitor:hover .gallery-hint { opacity: 1; transform: translateY(0); }
 
 .monitor-body { padding: 16px 18px 18px; }
 
@@ -692,6 +722,97 @@ a { color: inherit; }
 .modal-wrap { position: relative; }
 
 .btn-block { width: 100%; justify-content: center; }
+
+/* ---------------- lightbox (studio photo gallery) ---------------- */
+
+.lightbox-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 5, 7, 0.92);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  z-index: 60;
+}
+
+.lightbox-backdrop.open { display: flex; }
+
+.lightbox-stage {
+  position: relative;
+  max-width: min(1100px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+
+.lightbox-stage img {
+  max-width: 100%;
+  max-height: 76vh;
+  border-radius: 8px;
+  box-shadow: 0 30px 70px -20px rgba(0, 0, 0, 0.7);
+  object-fit: contain;
+  background: #0a0b0e;
+}
+
+.lightbox-title {
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.lightbox-counter {
+  font-size: 0.8rem;
+  color: var(--text-faint);
+  letter-spacing: 0.03em;
+  direction: ltr;
+}
+
+.lightbox-close {
+  position: fixed;
+  top: 20px;
+  left: 24px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(20, 21, 25, 0.7);
+  color: var(--text);
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 61;
+}
+
+.lightbox-nav {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  background: rgba(20, 21, 25, 0.7);
+  color: var(--text);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+  z-index: 61;
+}
+
+.lightbox-nav:hover, .lightbox-close:hover { border-color: var(--gold); color: var(--gold); }
+
+.lightbox-prev { right: 24px; }
+.lightbox-next { left: 24px; }
+
+@media (max-width: 640px) {
+  .lightbox-nav { width: 40px; height: 40px; font-size: 1.2rem; }
+  .lightbox-prev { right: 10px; }
+  .lightbox-next { left: 10px; }
+  .lightbox-close { left: 10px; top: 10px; }
+}
 
 /* ---------------- dashboard shell (used by dashboard.html) ---------------- */
 
@@ -1112,6 +1233,83 @@ a { color: inherit; }
   font-family: inherit;
   font-size: 0.82rem;
 }
+
+/* ---------------- admin: studio photos ---------------- */
+
+.studio-photos-editor {
+  margin-top: 16px;
+  display: none;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.studio-photos-editor.open { display: flex; }
+
+.studio-photos-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.studio-photo-thumb {
+  position: relative;
+  width: 86px;
+  height: 86px;
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--bezel);
+  background: var(--bg-raised-2);
+}
+
+.studio-photo-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.studio-photo-delete {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(8, 9, 11, 0.75);
+  color: var(--text);
+  font-size: 0.9rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.studio-photo-delete:hover { background: var(--danger); }
+
+.studio-photos-empty {
+  color: var(--text-faint);
+  font-size: 0.84rem;
+  margin: 0;
+}
+
+.studio-photos-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.studio-photos-controls .hint { margin: 0; font-size: 0.8rem; color: var(--text-faint); }
+
+.studio-photo-error {
+  color: var(--danger);
+  font-size: 0.82rem;
+  margin: 0;
+  display: none;
+}
+
+.studio-photo-error.show { display: block; }
 
 /* ---------------- admin: team management ---------------- */
 
