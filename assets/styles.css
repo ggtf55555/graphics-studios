@@ -156,6 +156,7 @@ a { color: inherit; }
 /* ---------------- hero ---------------- */
 
 .hero {
+  background: var(--bg);
   position: relative;
   overflow: hidden;
   padding: 150px 0 92px;
@@ -169,7 +170,7 @@ a { color: inherit; }
   inset: 0;
   z-index: 0;
   overflow: hidden;
-  opacity: 0.32;
+  opacity: 0.5;
 }
 
 .hero-slide {
@@ -203,8 +204,8 @@ a { color: inherit; }
   inset: 0;
   z-index: 1;
   background:
-    linear-gradient(180deg, rgba(8, 9, 11, 0.55) 0%, rgba(8, 9, 11, 0.72) 55%, var(--bg) 100%),
-    linear-gradient(90deg, rgba(8, 9, 11, 0.55) 0%, transparent 42%);
+    linear-gradient(180deg, rgba(5, 7, 11, 0.40) 0%, rgba(5, 7, 11, 0.58) 55%, var(--bg) 100%),
+    linear-gradient(90deg, rgba(5, 7, 11, 0.5) 0%, transparent 42%);
 }
 
 .hero-lines {
@@ -1430,18 +1431,55 @@ a { color: inherit; }
 .filter-bar {
   display: flex;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 14px 16px;
   align-items: flex-end;
   margin: 0 0 12px;
-  padding: 14px;
+  padding: 16px 18px;
   border: 1px solid var(--bezel);
-  border-radius: 12px;
-  background: rgba(14, 15, 18, 0.55);
+  border-radius: 14px;
+  background: var(--bg-raised);
 }
-.filter-field { display: flex; flex-direction: column; gap: 5px; min-width: 130px; }
-.filter-field label { font-size: 0.78rem; color: var(--text-muted); }
-.filter-field select, .filter-field input { min-height: 38px; }
+.filter-field { display: flex; flex-direction: column; gap: 6px; min-width: 140px; }
+.filter-field label { font-size: 0.78rem; color: var(--text-muted); padding-inline-start: 6px; }
+.filter-field select,
+.filter-field input[type="date"],
+.tm-pin-input {
+  appearance: none;
+  -webkit-appearance: none;
+  min-height: 40px;
+  padding: 8px 16px;
+  background-color: var(--bg-raised-2);
+  color: var(--text);
+  border: 1px solid var(--bezel);
+  border-radius: var(--radius-pill);
+  font-family: inherit;
+  font-size: 0.9rem;
+  color-scheme: dark;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.filter-field select {
+  cursor: pointer;
+  padding-left: 38px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1.5l5 5 5-5' fill='none' stroke='%23c9a24b' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: left 15px center;
+}
+.filter-field select option { background: var(--bg-raised-2); color: var(--text); }
+.filter-field select:hover,
+.filter-field input[type="date"]:hover { border-color: rgba(201, 162, 75, 0.55); }
+.filter-field select:focus,
+.filter-field input[type="date"]:focus,
+.tm-pin-input:focus {
+  outline: none;
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
 .filter-summary { margin: 0 0 14px; font-size: 0.86rem; color: var(--text-muted); }
+
+/* keep text readable above the animated dots */
+h1, h2, h3, h4, p, .hint, .filter-field label {
+  text-shadow: 0 0 8px rgba(5, 7, 11, 0.95), 0 0 2px rgba(5, 7, 11, 0.9);
+}
 
 /* ---- designer history ---- */
 .history-section { margin-top: 38px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
@@ -1451,6 +1489,18 @@ a { color: inherit; }
 
 /* ---- team PIN change ---- */
 .tm-pin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding-top: 6px; }
-.tm-pin-input { width: 150px; direction: ltr; text-align: center; letter-spacing: 0.3em; }
+.tm-pin-input { width: 160px; direction: ltr; text-align: center; letter-spacing: 0.25em; }
 .tm-pin-msg { font-size: 0.8rem; color: var(--teal); }
 .tm-pin-msg.err { color: #e0735f; }
+.team-row .tm-pin-input { width: 160px; flex: 0 0 160px; min-width: 0; }
+.team-row .tm-pin { padding-inline-start: 0; }
+.team-row input.tm-pin-input[type="text"] {
+  width: 160px;
+  flex: 0 0 160px;
+  min-width: 0;
+  min-height: 40px;
+  padding: 8px 16px;
+  border-radius: var(--radius-pill);
+  font-size: 0.9rem;
+}
+.team-row input.tm-pin-input[type="text"]:focus { border-color: var(--gold); box-shadow: 0 0 0 3px var(--gold-soft); }

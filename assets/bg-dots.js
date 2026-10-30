@@ -16,7 +16,7 @@
   document.body.insertBefore(canvas, document.body.firstChild);
   var ctx = canvas.getContext("2d");
 
-  var GAP = 34;              // distance between dots
+  var GAP = 40;              // distance between dots
   var BASE = [74, 62, 34];   // dim bronze
   var GLOW = [226, 186, 96]; // site gold, brightened
   var W = 0, H = 0, DPR = 1, cols = 0, rows = 0, dots = [];
@@ -102,10 +102,10 @@
         py += mdy * pull;
       }
 
-      var heat = Math.min(1, glow * (0.4 + 0.6 * life) * 1.25 + m * 1.8);
-      var alpha = 0.3 + 0.7 * heat;
+      var heat = Math.min(1, glow * (0.4 + 0.6 * life) * 0.9 + m * 1.6);
+      var alpha = 0.16 + 0.5 * heat;
       if (glow < 0.05 && m < 0.05) alpha *= 0.55 + 0.45 * life;  // ambient flicker
-      var size = 0.8 + heat * 1.5;
+      var size = 0.55 + heat * 0.85;
 
       ctx.fillStyle = "rgba(" + mix(BASE[0], GLOW[0], heat) + "," + mix(BASE[1], GLOW[1], heat) + "," + mix(BASE[2], GLOW[2], heat) + "," + alpha.toFixed(3) + ")";
       ctx.beginPath();
