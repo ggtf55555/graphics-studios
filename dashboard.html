@@ -28,9 +28,17 @@
 
 <!-- ===================== designer view ===================== -->
 <div id="designer-view" style="display:none">
-<h2 style="margin-bottom:16px">مهامي</h2>
+<h2 style="margin-bottom:16px">مهامي الجارية</h2>
 <div class="task-list" id="my-tasks"></div>
-<p id="my-tasks-empty" style="display:none;color:var(--text-muted)">لا توجد مهام حالياً.</p>
+<p id="my-tasks-empty" style="display:none;color:var(--text-muted)">لا توجد مهام جارية حالياً.</p>
+<div class="history-section">
+<div class="list-toolbar">
+<h2>سجل مهامي السابقة <span id="my-history-count" class="history-count"></span></h2>
+</div>
+<p class="filter-summary" id="my-history-summary"></p>
+<div class="task-list" id="my-history"></div>
+<p id="my-history-empty" style="display:none;color:var(--text-muted)">لا توجد مهام مكتملة بعد. المهام التي تنجزها ستظهر هنا.</p>
+</div>
 </div>
 
 <!-- ===================== admin view ===================== -->
@@ -38,7 +46,7 @@
 
 <div class="admin-tabs">
 <button class="btn admin-tab active" data-tab="tab-new">مهمة جديدة</button>
-<button class="btn admin-tab" data-tab="tab-all">كل المهام</button>
+<button class="btn admin-tab" data-tab="tab-all">مهام المنتسبين</button>
 <button class="btn admin-tab" data-tab="tab-stats">سجل الأداء</button>
 <button class="btn admin-tab" data-tab="tab-studios">الاستوديوهات</button>
 <button class="btn admin-tab" data-tab="tab-team">الفريق</button>
@@ -85,9 +93,54 @@
 
 <section id="tab-all" class="admin-panel" style="display:none">
 <div class="list-toolbar">
-<h2>كل المهام</h2>
+<h2>مهام كل المنتسبين</h2>
+</div>
+<div class="filter-bar">
+<div class="filter-field">
+<label for="all-filter-assignee">الشخص</label>
 <select id="all-filter-assignee"></select>
 </div>
+<div class="filter-field">
+<label for="all-filter-status">الحالة</label>
+<select id="all-filter-status">
+<option value="">كل الحالات</option>
+<option value="__open">جارية (غير مكتملة)</option>
+<option value="__done">مكتملة</option>
+<option value="مطلوب">مطلوب</option>
+<option value="قيد التنفيذ">قيد التنفيذ</option>
+<option value="متأخر">متأخر</option>
+</select>
+</div>
+<div class="filter-field">
+<label for="all-filter-basis">الوقت حسب</label>
+<select id="all-filter-basis">
+<option value="created_at">تاريخ الإضافة</option>
+<option value="due_date">تاريخ التسليم</option>
+<option value="completed_at">تاريخ الإنجاز</option>
+</select>
+</div>
+<div class="filter-field">
+<label for="all-filter-period">الفترة</label>
+<select id="all-filter-period">
+<option value="">كل الوقت</option>
+<option value="today">اليوم</option>
+<option value="week">آخر 7 أيام</option>
+<option value="month">هذا الشهر</option>
+<option value="lastmonth">الشهر الماضي</option>
+<option value="custom">فترة مخصصة…</option>
+</select>
+</div>
+<div class="filter-field filter-custom" id="all-filter-custom" style="display:none">
+<label for="all-filter-from">من</label>
+<input type="date" id="all-filter-from" />
+</div>
+<div class="filter-field filter-custom" id="all-filter-custom2" style="display:none">
+<label for="all-filter-to">إلى</label>
+<input type="date" id="all-filter-to" />
+</div>
+<button type="button" class="btn btn-sm" id="all-filter-reset">إعادة ضبط</button>
+</div>
+<p class="filter-summary" id="all-summary"></p>
 <div class="task-list" id="all-tasks"></div>
 <p id="all-tasks-empty" style="display:none;color:var(--text-muted)">لا توجد مهام بعد.</p>
 </section>
@@ -137,7 +190,7 @@
 
 <section id="tab-team" class="admin-panel" style="display:none">
 <h2 style="margin-bottom:8px">إدارة الفريق</h2>
-<p class="hint" style="margin:0 0 18px">تعديل الاسم الظاهر لأي عضو يُحدّث اسمه فوراً في صفحة الدخول ولوحة المهام. الدور يظهر في بطاقة الفريق بالواجهة الرئيسية. الحسابات الاحتياطية (غير مفعّلة) يمكن تفعيلها وتسميتها باسم عضو جديد بدل إنشاء حساب دخول من جديد.</p>
+<p class="hint" style="margin:0 0 18px">تعديل الاسم الظاهر لأي عضو يُحدّث اسمه فوراً في صفحة الدخول ولوحة المهام. الدور يظهر في بطاقة الفريق بالواجهة الرئيسية. الحسابات الاحتياطية (غير مفعّلة) يمكن تفعيلها وتسميتها باسم عضو جديد بدل إنشاء حساب دخول من جديد. لتغيير رمز دخول أي حساب (بما فيه حساب الإدارة): اكتب 4 أرقام جديدة في خانة «رمز جديد» ثم اضغط «تغيير الرمز».</p>
 <div class="team-list" id="team-admin-list"></div>
 </section>
 
@@ -209,6 +262,11 @@ return lines.join("\n");
 }
 
 // ---------------- designer: my tasks ----------------
+function monthLabel(d) {
+try { return new Date(d).toLocaleDateString("ar-IQ-u-nu-latn", { year: "numeric", month: "long" }); }
+catch { return ""; }
+}
+
 async function loadMyTasks(userId) {
 const container = document.getElementById("my-tasks");
 const emptyMsg = document.getElementById("my-tasks-empty");
@@ -222,15 +280,20 @@ if (error) {
 container.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل المهام حالياً.</p>`;
 return;
 }
-if (!tasks || tasks.length === 0) {
-emptyMsg.style.display = "block";
-return;
-}
 
 const studioById = Object.fromEntries((studios || []).map((s) => [s.id, s.name]));
+const allTasks = tasks || [];
+const openTasks = allTasks.filter((t) => t.status !== DONE_STATUS);
+const doneTasks = allTasks
+.filter((t) => t.status === DONE_STATUS)
+.sort((a, b) => new Date(b.completed_at || b.created_at) - new Date(a.completed_at || a.created_at));
+
+renderMyHistory(doneTasks, studioById, userId);
 
 container.innerHTML = "";
-tasks.forEach((task) => {
+emptyMsg.style.display = openTasks.length === 0 ? "block" : "none";
+
+openTasks.forEach((task) => {
 const studioName = studioById[task.studio_id] || "—";
 const pillClass = STATUS_CLASS[task.status] || "pill-required";
 const card = document.createElement("article");
@@ -255,10 +318,9 @@ ${task.due_date ? `<span>تسليم: ${fmtDate(task.due_date)}</span>` : ""}
 <option value="مطلوب" ${task.status === "مطلوب" ? "selected" : ""}>مطلوب</option>
 <option value="قيد التنفيذ" ${task.status === "قيد التنفيذ" ? "selected" : ""}>قيد التنفيذ</option>
 <option value="متأخر" ${task.status === "متأخر" ? "selected" : ""}>متأخر</option>
-<option value="منجز" ${task.status === "منجز" ? "selected" : ""}>منجز</option>
+<option value="منجز">منجز</option>
 </select>
 <button class="btn btn-sm save-notes-btn" data-task-id="${task.id}">حفظ الملاحظة</button>
-${task.status === DONE_STATUS ? `<button class="btn btn-sm btn-gold copy-task-btn" data-task-id="${task.id}">نسخ كنص جاهز</button>` : ""}
 </div>
 `;
 container.appendChild(card);
@@ -266,24 +328,76 @@ container.appendChild(card);
 card.querySelector(".status-select").addEventListener("change", async (e) => {
 const newStatus = e.target.value;
 const { error } = await sb.from("tasks").update({ status: newStatus }).eq("id", task.id);
-if (!error) {
-task.status = newStatus;
-if (newStatus === DONE_STATUS) task.completed_at = new Date().toISOString();
-loadMyTasks(userId);
-}
+if (!error) loadMyTasks(userId);
 });
 
 card.querySelector(".save-notes-btn").addEventListener("click", async () => {
 const notes = card.querySelector(".notes-input").value;
 await sb.from("tasks").update({ notes }).eq("id", task.id);
 });
-
-const copyBtn = card.querySelector(".copy-task-btn");
-if (copyBtn) {
-copyBtn.addEventListener("click", () => {
-copyText(formatTaskForCopy(task, studioName), copyBtn);
 });
 }
+
+function renderMyHistory(doneTasks, studioById, userId) {
+const box = document.getElementById("my-history");
+const empty = document.getElementById("my-history-empty");
+const count = document.getElementById("my-history-count");
+const summary = document.getElementById("my-history-summary");
+count.textContent = doneTasks.length ? `(${doneTasks.length})` : "";
+box.innerHTML = "";
+if (doneTasks.length === 0) {
+empty.style.display = "block";
+summary.textContent = "";
+return;
+}
+empty.style.display = "none";
+
+const withDue = doneTasks.filter((t) => t.due_date && t.completed_at);
+const onTime = withDue.filter((t) => new Date(t.completed_at) <= new Date(t.due_date + "T23:59:59")).length;
+summary.textContent = withDue.length
+? `إجمالي المنجز: ${doneTasks.length} · التسليم بالموعد: ${Math.round((onTime / withDue.length) * 100)}%`
+: `إجمالي المنجز: ${doneTasks.length}`;
+
+let lastMonth = "";
+doneTasks.forEach((task) => {
+const when = task.completed_at || task.created_at;
+const m = monthLabel(when);
+if (m && m !== lastMonth) {
+lastMonth = m;
+const h = document.createElement("h4");
+h.className = "history-month";
+h.textContent = m;
+box.appendChild(h);
+}
+const studioName = studioById[task.studio_id] || "—";
+const late = task.due_date && task.completed_at && new Date(task.completed_at) > new Date(task.due_date + "T23:59:59");
+const card = document.createElement("article");
+card.className = "task-card history-card";
+card.innerHTML = `
+<div class="task-card-top">
+<div>
+<div class="task-studio">${escapeHtml(studioName)}${task.task_type ? " · " + escapeHtml(task.task_type) : ""}</div>
+<div class="task-desc">${escapeHtml(task.description)}</div>
+</div>
+<span class="pill pill-done">منجز</span>
+</div>
+<div class="task-meta">
+${task.completed_at ? `<span>أُنجزت: ${fmtDate(task.completed_at)}</span>` : ""}
+${task.due_date ? `<span>تسليم: ${fmtDate(task.due_date)}${late ? " (بعد الموعد)" : task.completed_at ? " (بالموعد)" : ""}</span>` : ""}
+${task.notes ? `<span>ملاحظة: ${escapeHtml(task.notes)}</span>` : ""}
+</div>
+<div class="task-actions">
+<button class="btn btn-sm btn-gold copy-task-btn">نسخ كنص جاهز</button>
+<button class="btn btn-sm reopen-task-btn">إعادة فتح</button>
+</div>
+`;
+box.appendChild(card);
+const copyBtn = card.querySelector(".copy-task-btn");
+copyBtn.addEventListener("click", () => copyText(formatTaskForCopy(task, studioName), copyBtn));
+card.querySelector(".reopen-task-btn").addEventListener("click", async () => {
+const { error } = await sb.from("tasks").update({ status: "قيد التنفيذ" }).eq("id", task.id);
+if (!error) loadMyTasks(userId);
+});
 });
 }
 
@@ -308,7 +422,7 @@ const typeSel = document.getElementById("nt-type");
 typeSel.innerHTML = adminLookups.types.map((t) => `<option value="${t.name}">${escapeHtml(t.name)}</option>`).join("");
 
 const filterSel = document.getElementById("all-filter-assignee");
-filterSel.innerHTML = `<option value="">كل المصممين</option>` +
+filterSel.innerHTML = `<option value="">كل المنتسبين</option>` +
 adminLookups.designers.map((d) => `<option value="${d.id}">${escapeHtml(d.full_name)}</option>`).join("");
 }
 
@@ -388,20 +502,66 @@ recognition.start();
 }
 }
 
-// ---------------- admin: all tasks ----------------
+// ---------------- admin: all tasks (filter by person / time / status) ----------------
+function ymdLocal(d) {
+const x = new Date(d);
+if (isNaN(x)) return "";
+return x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0") + "-" + String(x.getDate()).padStart(2, "0");
+}
+
+function periodRange(period) {
+const now = new Date();
+const y = now.getFullYear(), m = now.getMonth();
+if (period === "today") { const t = ymdLocal(now); return [t, t]; }
+if (period === "week") { const f = new Date(now); f.setDate(f.getDate() - 6); return [ymdLocal(f), ymdLocal(now)]; }
+if (period === "month") return [ymdLocal(new Date(y, m, 1)), ymdLocal(new Date(y, m + 1, 0))];
+if (period === "lastmonth") return [ymdLocal(new Date(y, m - 1, 1)), ymdLocal(new Date(y, m, 0))];
+if (period === "custom") return [document.getElementById("all-filter-from").value, document.getElementById("all-filter-to").value];
+return ["", ""];
+}
+
 async function loadAllTasks() {
 const container = document.getElementById("all-tasks");
 const emptyMsg = document.getElementById("all-tasks-empty");
-const filterVal = document.getElementById("all-filter-assignee").value;
+const summaryEl = document.getElementById("all-summary");
+const personVal = document.getElementById("all-filter-assignee").value;
+const statusVal = document.getElementById("all-filter-status").value;
+const basis = document.getElementById("all-filter-basis").value;
+const period = document.getElementById("all-filter-period").value;
 
 let query = sb.from("tasks").select("*").order("created_at", { ascending: false });
-if (filterVal) query = query.eq("assignee_id", filterVal);
-const { data: tasks, error } = await query;
+if (personVal) query = query.eq("assignee_id", personVal);
+const { data, error } = await query;
 
-if (error || !tasks) {
+if (error || !data) {
 container.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل المهام.</p>`;
+summaryEl.textContent = "";
 return;
 }
+
+let tasks = data;
+if (statusVal === "__open") tasks = tasks.filter((t) => t.status !== DONE_STATUS);
+else if (statusVal === "__done") tasks = tasks.filter((t) => t.status === DONE_STATUS);
+else if (statusVal) tasks = tasks.filter((t) => t.status === statusVal);
+
+if (period) {
+const [from, to] = periodRange(period);
+if (from || to) {
+tasks = tasks.filter((t) => {
+const raw = t[basis];
+if (!raw) return false;
+const day = basis === "due_date" ? raw : ymdLocal(raw);
+if (from && day < from) return false;
+if (to && day > to) return false;
+return true;
+});
+}
+}
+
+const nDone = tasks.filter((t) => t.status === DONE_STATUS).length;
+const nLate = tasks.filter((t) => t.status === "متأخر").length;
+summaryEl.textContent = `النتائج: ${tasks.length} · جارية: ${tasks.length - nDone} · مكتملة: ${nDone}` + (nLate ? ` · متأخرة: ${nLate}` : "");
+
 if (tasks.length === 0) {
 container.innerHTML = "";
 emptyMsg.style.display = "block";
@@ -420,13 +580,15 @@ card.className = "task-card";
 card.innerHTML = `
 <div class="task-card-top">
 <div>
-<div class="task-studio">${escapeHtml(studioById[task.studio_id] || "—")}${task.task_type ? " · " + escapeHtml(task.task_type) : ""} · ${escapeHtml(designerById[task.assignee_id] || "—")}</div>
+<div class="task-studio">${escapeHtml(designerById[task.assignee_id] || "—")} · ${escapeHtml(studioById[task.studio_id] || "—")}${task.task_type ? " · " + escapeHtml(task.task_type) : ""}</div>
 <div class="task-desc">${escapeHtml(task.description)}</div>
 </div>
 <span class="pill ${pillClass}">${escapeHtml(task.status)}</span>
 </div>
 <div class="task-meta">
+<span>أُضيفت: ${fmtDate(task.created_at)}</span>
 ${task.due_date ? `<span>تسليم: ${fmtDate(task.due_date)}</span>` : ""}
+${task.completed_at ? `<span>أُنجزت: ${fmtDate(task.completed_at)}</span>` : ""}
 ${task.notes ? `<span>ملاحظة: ${escapeHtml(task.notes)}</span>` : ""}
 </div>
 <div class="task-actions">
@@ -441,6 +603,27 @@ await sb.from("tasks").delete().eq("id", task.id);
 loadAllTasks();
 loadStats();
 });
+});
+}
+
+function setupAllTasksFilters() {
+const ids = ["all-filter-assignee", "all-filter-status", "all-filter-basis", "all-filter-period", "all-filter-from", "all-filter-to"];
+ids.forEach((id) => document.getElementById(id).addEventListener("change", () => {
+const custom = document.getElementById("all-filter-period").value === "custom";
+document.getElementById("all-filter-custom").style.display = custom ? "flex" : "none";
+document.getElementById("all-filter-custom2").style.display = custom ? "flex" : "none";
+loadAllTasks();
+}));
+document.getElementById("all-filter-reset").addEventListener("click", () => {
+document.getElementById("all-filter-assignee").value = "";
+document.getElementById("all-filter-status").value = "";
+document.getElementById("all-filter-basis").value = "created_at";
+document.getElementById("all-filter-period").value = "";
+document.getElementById("all-filter-from").value = "";
+document.getElementById("all-filter-to").value = "";
+document.getElementById("all-filter-custom").style.display = "none";
+document.getElementById("all-filter-custom2").style.display = "none";
+loadAllTasks();
 });
 }
 
@@ -839,6 +1022,11 @@ ${memberPhotoUrl ? `<button type="button" class="btn btn-sm tm-photo-remove">ح�
 <input type="checkbox" class="tm-active" ${member.active ? "checked" : ""} /> مفعّل
 </label>
 <button class="btn btn-sm tm-save">حفظ</button>
+<div class="tm-pin">
+<input type="text" inputmode="numeric" maxlength="4" autocomplete="off" class="tm-pin-input" placeholder="رمز جديد (4 أرقام)" />
+<button type="button" class="btn btn-sm tm-pin-btn">تغيير الرمز</button>
+<span class="tm-pin-msg" role="status"></span>
+</div>
 `;
 const photoInput = row.querySelector(".tm-photo-input");
 const photoBtn = row.querySelector(".tm-photo-btn");
@@ -877,6 +1065,26 @@ loadTeamAdmin();
 });
 }
 
+const pinInput = row.querySelector(".tm-pin-input");
+const pinBtn = row.querySelector(".tm-pin-btn");
+const pinMsg = row.querySelector(".tm-pin-msg");
+pinInput.addEventListener("input", () => { pinInput.value = pinInput.value.replace(/\D/g, "").slice(0, 4); });
+pinBtn.addEventListener("click", async () => {
+const pin = pinInput.value.trim();
+pinMsg.classList.remove("err");
+if (!/^\d{4}$/.test(pin)) { pinMsg.classList.add("err"); pinMsg.textContent = "الرمز يجب أن يكون 4 أرقام."; return; }
+if (!member.profile_id) { pinMsg.classList.add("err"); pinMsg.textContent = "هذا الحساب غير مرتبط بملف دخول."; return; }
+if (!confirm(`تغيير رمز دخول «${member.full_name}»؟ سيستخدم الرمز الجديد من الآن.`)) return;
+pinBtn.disabled = true;
+pinMsg.textContent = "جارِ التغيير…";
+const { error: pinErr } = await sb.rpc("admin_set_pin", { target_id: member.profile_id, new_pin: pin });
+pinBtn.disabled = false;
+if (pinErr) { pinMsg.classList.add("err"); pinMsg.textContent = "تعذّر تغيير الرمز."; return; }
+pinInput.value = "";
+pinMsg.textContent = "تم تغيير الرمز ✓";
+setTimeout(() => { pinMsg.textContent = ""; }, 3500);
+});
+
 row.querySelector(".tm-save").addEventListener("click", async () => {
 const fullName = row.querySelector(".tm-name").value.trim();
 const role = row.querySelector(".tm-role").value.trim();
@@ -907,7 +1115,7 @@ if (tab.dataset.tab === "tab-studios") loadStudiosAdmin();
 if (tab.dataset.tab === "tab-team") loadTeamAdmin();
 });
 });
-document.getElementById("all-filter-assignee").addEventListener("change", loadAllTasks);
+setupAllTasksFilters();
 setupStudioAddForm();
 }
 

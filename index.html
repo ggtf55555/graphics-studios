@@ -26,7 +26,7 @@
 </header>
 
 <section class="hero">
-<div class="hero-bg" id="hero-bg" style="background-image:url('https://lh3.googleusercontent.com/d/1_6nxkLVLvatj_-EdbxvLxuZRtVMfFzgS=w1600')"></div>
+<div class="hero-bg" id="hero-bg"><div class="hero-slide active" style="background-image:url('https://lh3.googleusercontent.com/d/1_6nxkLVLvatj_-EdbxvLxuZRtVMfFzgS=w1600')"></div></div>
 <div class="hero-scrim"></div>
 <svg class="hero-lines" viewBox="0 0 1180 560" preserveAspectRatio="none" aria-hidden="true">
 <line x1="60" y1="560" x2="340" y2="0" stroke="#c9a24b" stroke-width="1" />
@@ -306,6 +306,8 @@ fills.push(card.querySelector(".progress-fill"));
 
 renderFilters(types);
 
+initHeroSlideshow(studios.map((s) => (photosByStudio[s.id] && photosByStudio[s.id][0]) || s.image_url || ""));
+
 document.getElementById("stat-studios").textContent = studios.length;
 document.getElementById("stat-done").textContent = doneTotal;
 document.getElementById("stat-live").textContent = liveCount;
@@ -321,6 +323,59 @@ fill.style.width = fill.dataset.pct + "%";
 }, i * 90);
 });
 });
+});
+}
+
+// ---------------- hero slideshow: first photo of each studio, every 5s ----------------
+let heroTimer = null;
+function initHeroSlideshow(rawUrls) {
+const host = document.getElementById("hero-bg");
+if (!host) return;
+const urls = [...new Set(rawUrls.filter(Boolean))];
+if (urls.length === 0) return;
+
+// keep only images that actually load (legacy links may be broken)
+Promise.all(urls.map((u) => new Promise((res) => {
+const im = new Image();
+im.onload = () => res(u);
+im.onerror = () => res(null);
+im.src = u;
+}))).then((list) => {
+const good = list.filter(Boolean);
+if (good.length === 0) return;
+
+const old = Array.from(host.querySelectorAll(".hero-slide"));
+const slides = good.map((u) => {
+const el = document.createElement("div");
+el.className = "hero-slide";
+el.style.backgroundImage = `url("${u}")`;
+host.appendChild(el);
+return el;
+});
+
+let idx = 0;
+const show = (i) => {
+const prev = host.querySelector(".hero-slide.active");
+if (prev) {
+prev.classList.remove("active");
+prev.classList.add("leaving");
+setTimeout(() => prev.classList.remove("leaving"), 1600);
+}
+slides[i].classList.add("active");
+};
+requestAnimationFrame(() => {
+show(0);
+old.forEach((el) => { if (!slides.includes(el)) setTimeout(() => el.remove(), 1700); });
+});
+
+if (heroTimer) clearInterval(heroTimer);
+if (slides.length > 1) {
+const tick = () => { idx = (idx + 1) % slides.length; show(idx); };
+const start = () => { if (!heroTimer) heroTimer = setInterval(tick, 5000); };
+const stop = () => { clearInterval(heroTimer); heroTimer = null; };
+start();
+document.addEventListener("visibilitychange", () => (document.hidden ? stop() : start()));
+}
 });
 }
 
