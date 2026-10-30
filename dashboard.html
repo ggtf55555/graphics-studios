@@ -152,6 +152,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
+<script src="assets/bg-dots.js"></script>
 <script>
 const STATUS_CLASS = {
 "مطلوب": "pill-required",
@@ -790,6 +791,25 @@ loadStudiosAdmin();
 });
 }
 
+// Shrinks a phone photo to a web-friendly JPEG before upload.
+function resizeImage(file, maxSide, quality) {
+return new Promise((resolve, reject) => {
+const url = URL.createObjectURL(file);
+const img = new Image();
+img.onload = () => {
+const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+const c = document.createElement("canvas");
+c.width = w; c.height = h;
+c.getContext("2d").drawImage(img, 0, 0, w, h);
+URL.revokeObjectURL(url);
+c.toBlob((b) => (b ? resolve(b) : reject(new Error("resize failed"))), "image/jpeg", quality);
+};
+img.onerror = () => { URL.revokeObjectURL(url); reject(new Error("bad image")); };
+img.src = url;
+});
+}
+
 // ---------------- admin: team management ----------------
 async function loadTeamAdmin() {
 const list = document.getElementById("team-admin-list");
@@ -803,7 +823,15 @@ list.innerHTML = "";
 data.forEach((member) => {
 const row = document.createElement("div");
 row.className = "team-row" + (member.active ? "" : " inactive");
+const memberPhotoUrl = member.photo_path ? sb.storage.from("studio-images").getPublicUrl(member.photo_path).data.publicUrl : "";
 row.innerHTML = `
+<div class="tm-avatar">${memberPhotoUrl ? `<img src="${memberPhotoUrl}" alt="" />` : escapeHtml((member.full_name || "؟").trim().charAt(0))}</div>
+<div class="tm-photo-actions">
+<input type="file" accept="image/*" class="tm-photo-input" style="display:none" />
+<button type="button" class="btn btn-sm tm-photo-btn">${memberPhotoUrl ? "تغيير الصورة" : "إضافة صورة"}</button>
+${memberPhotoUrl ? `<button type="button" class="btn btn-sm tm-photo-remove">حذف الصورة</button>` : ""}
+<span class="tm-photo-msg"></span>
+</div>
 <input type="text" class="tm-name" value="${escapeHtml(member.full_name)}" placeholder="الاسم" />
 <input type="text" class="tm-role" value="${escapeHtml(member.role || "")}" placeholder="الدور (مثال: مصمم 3D)" />
 <span class="team-row-email">${escapeHtml(member.email)}</span>
@@ -812,6 +840,43 @@ row.innerHTML = `
 </label>
 <button class="btn btn-sm tm-save">حفظ</button>
 `;
+const photoInput = row.querySelector(".tm-photo-input");
+const photoBtn = row.querySelector(".tm-photo-btn");
+const photoMsg = row.querySelector(".tm-photo-msg");
+photoBtn.addEventListener("click", () => photoInput.click());
+photoInput.addEventListener("change", async () => {
+const file = photoInput.files[0];
+photoInput.value = "";
+if (!file) return;
+photoMsg.classList.remove("err");
+photoMsg.textContent = "جارِ الرفع…";
+photoBtn.disabled = true;
+try {
+const blob = await resizeImage(file, 640, 0.86);
+const path = `team/${member.id}-${Date.now()}.jpg`;
+const { error: upErr } = await sb.storage.from("studio-images").upload(path, blob, { contentType: "image/jpeg", cacheControl: "3600", upsert: false });
+if (upErr) throw upErr;
+const { error: dbErr } = await sb.from("team_accounts").update({ photo_path: path }).eq("id", member.id);
+if (dbErr) { await sb.storage.from("studio-images").remove([path]); throw dbErr; }
+if (member.photo_path) await sb.storage.from("studio-images").remove([member.photo_path]);
+loadTeamAdmin();
+} catch (err) {
+photoMsg.classList.add("err");
+photoMsg.textContent = "تعذّر رفع الصورة.";
+photoBtn.disabled = false;
+}
+});
+const photoRemove = row.querySelector(".tm-photo-remove");
+if (photoRemove) {
+photoRemove.addEventListener("click", async () => {
+if (!confirm("حذف صورة هذا العضو؟")) return;
+const { error: dbErr } = await sb.from("team_accounts").update({ photo_path: null }).eq("id", member.id);
+if (dbErr) { photoMsg.classList.add("err"); photoMsg.textContent = "تعذّر الحذف."; return; }
+await sb.storage.from("studio-images").remove([member.photo_path]);
+loadTeamAdmin();
+});
+}
+
 row.querySelector(".tm-save").addEventListener("click", async () => {
 const fullName = row.querySelector(".tm-name").value.trim();
 const role = row.querySelector(".tm-role").value.trim();

@@ -121,6 +121,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
+<script src="assets/bg-dots.js"></script>
 <script>
 function handleCardImgError(img) {
 const screen = img.closest(".monitor-screen");
@@ -330,11 +331,18 @@ const AVATAR_COLORS = ["var(--gold)", "var(--teal)"];
 
 async function loadTeamShowcase() {
 const teamGrid = document.getElementById("team-grid");
-const { data, error } = await sb
+let { data, error } = await sb
+.from("team_accounts")
+.select("full_name, role, active, photo_path")
+.eq("active", true)
+.order("sort_order");
+if (error) {
+({ data, error } = await sb
 .from("team_accounts")
 .select("full_name, role, active")
 .eq("active", true)
-.order("sort_order");
+.order("sort_order"));
+}
 
 if (error || !data || !data.length) {
 teamGrid.innerHTML = `<p class="team-empty">لا يوجد أعضاء فريق معروضون حالياً.</p>`;
@@ -348,13 +356,14 @@ const initial = (member.full_name || "؟").trim().charAt(0);
 const isAdmin = member.full_name === "الإدارة";
 const role = member.role || (isAdmin ? "إدارة النظام" : "عضو الفريق");
 const color = AVATAR_COLORS[i % AVATAR_COLORS.length];
+const photoUrl = member.photo_path ? sb.storage.from("studio-images").getPublicUrl(member.photo_path).data.publicUrl : "";
 
 const card = document.createElement("article");
 card.className = "team-card";
 card.style.animationDelay = `${i * 45}ms`;
 card.innerHTML = `
 <div class="team-card-index">${num}</div>
-<div class="team-avatar" style="background:${color}">${initial}</div>
+<div class="team-avatar" style="background:${color}">${photoUrl ? `<img src="${photoUrl}" alt="${member.full_name}" loading="lazy" onerror="this.remove()" />` : initial}</div>
 <div class="team-name">${member.full_name}</div>
 <div class="team-role">${role}</div>
 `;
