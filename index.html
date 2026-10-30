@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>استوديوهات الإنتاج المرئي</title>
+<meta name="description" content="لوحة متابعة استوديوهات الإنتاج المرئي — من الفكرة حتى التسليم." />
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#0e0f12" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+
+<header class="site-header">
+  <div class="wrap">
+    <a class="brand" href="index.html"><span class="dot"></span> استوديوهات الإنتاج</a>
+    <button class="btn" id="open-login">دخول الفريق</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="wrap">
+    <h1 class="display">استوديوهات الإنتاج المرئي</h1>
+    <p>كل استوديو يمر بثماني مراحل إنتاج، من تحديد الثيمة حتى التسليم. هذه نظرة حيّة على ما يُصنع الآن.</p>
+  </div>
+</section>
+
+<section class="grid-section">
+  <div class="wrap">
+    <div class="grid" id="studio-grid" aria-live="polite"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="wrap">وحدة التصميم والإنتاج المرئي</div>
+</footer>
+
+<div class="modal-backdrop" id="login-backdrop">
+  <div class="modal modal-wrap">
+    <button class="close" id="close-login" aria-label="إغلاق">×</button>
+    <h2>دخول الفريق</h2>
+    <p class="hint">اختر اسمك وأدخل الرمز الخاص بك.</p>
+    <form id="login-form">
+      <div class="field">
+        <label for="person">الاسم</label>
+        <select id="person" required></select>
+      </div>
+      <div class="field">
+        <label for="pin">الرمز</label>
+        <input id="pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" required />
+      </div>
+      <p class="error" id="login-error">الاسم أو الرمز غير صحيح.</p>
+      <button type="submit" class="btn btn-gold btn-block" id="login-submit">دخول</button>
+    </form>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="assets/supabase-client.js"></script>
+<script>
+const STAGE_COUNT = 8;
+
+function stageBadge(stage) {
+  if (!stage) return { cls: "", label: "لم تبدأ بعد" };
+  if (stage.allDone) return { cls: "done", label: "تم التسليم" };
+  if (stage.inProgress) return { cls: "live", label: stage.name };
+  return { cls: "", label: stage.name || "لم تبدأ بعد" };
+}
+
+function renderCard(studio, stages) {
+  const ordered = stages.slice().sort((a, b) => a.sort_order - b.sort_order);
+  const doneCount = ordered.filter((s) => s.status === "مكتملة").length;
+  const current = ordered.find((s) => s.status !== "مكتملة");
+  const allDone = doneCount === ordered.length && ordered.length > 0;
+
+  let badge;
+  if (allDone) badge = { cls: "done", label: "تم التسليم" };
+  else if (current && current.status === "قيد التنفيذ") badge = { cls: "live", label: current.name };
+  else if (current) badge = { cls: "", label: current.name };
+  else badge = { cls: "", label: "لم تبدأ بعد" };
+
+  const ticks = ordered
+    .map((s) => `<span class="${s.status === "مكتملة" ? "done" : s.status === "قيد التنفيذ" ? "live" : ""}"></span>`)
+    .join("");
+
+  const metaParts = [studio.type, studio.topic].filter(Boolean);
+  const bg = studio.image_url ? `style="background-image:url('${studio.image_url}')"` : "";
+
+  const el = document.createElement("article");
+  el.className = "monitor";
+  el.innerHTML = `
+    <div class="monitor-screen" ${bg}>
+      ${studio.image_url ? "" : '<div class="noscreen">لا توجد صورة</div>'}
+    </div>
+    <div class="monitor-body">
+      <div class="monitor-name">${studio.name}</div>
+      ${metaParts.length ? `<div class="monitor-meta">${metaParts.join(" · ")}</div>` : ""}
+      <div class="monitor-stage"><span class="status-dot ${badge.cls}"></span> ${badge.label}</div>
+      <div class="stage-ticks">${ticks}</div>
+    </div>
+  `;
+  return el;
+}
+
+async function loadStudios() {
+  const grid = document.getElementById("studio-grid");
+  const [{ data: studios, error: e1 }, { data: stageStatus, error: e2 }, { data: stages, error: e3 }] =
+    await Promise.all([
+      sb.from("studios").select("*").order("sort_order"),
+      sb.from("studio_stage_status").select("studio_id, status, stage_id"),
+      sb.from("pipeline_stages").select("id, name, sort_order"),
+    ]);
+
+  if (e1 || e2 || e3) {
+    grid.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات حالياً.</p>`;
+    return;
+  }
+
+  const stageById = Object.fromEntries(stages.map((s) => [s.id, s]));
+
+  studios.forEach((studio, i) => {
+    const rows = stageStatus
+      .filter((r) => r.studio_id === studio.id)
+      .map((r) => ({ ...stageById[r.stage_id], status: r.status }));
+    const card = renderCard(studio, rows);
+    card.style.animationDelay = `${i * 45}ms`;
+    grid.appendChild(card);
+  });
+}
+
+loadStudios();
+
+// ---------------- login modal ----------------
+const backdrop = document.getElementById("login-backdrop");
+const personSelect = document.getElementById("person");
+TEAM_ACCOUNTS.forEach((p) => {
+  const opt = document.createElement("option");
+  opt.value = p.email;
+  opt.textContent = p.name;
+  personSelect.appendChild(opt);
+});
+
+document.getElementById("open-login").addEventListener("click", () => backdrop.classList.add("open"));
+document.getElementById("close-login").addEventListener("click", () => backdrop.classList.remove("open"));
+backdrop.addEventListener("click", (e) => { if (e.target === backdrop) backdrop.classList.remove("open"); });
+
+document.getElementById("login-form").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const email = personSelect.value;
+  const pin = document.getElementById("pin").value.trim();
+  const errorEl = document.getElementById("login-error");
+  const submitBtn = document.getElementById("login-submit");
+  errorEl.classList.remove("show");
+  submitBtn.disabled = true;
+  submitBtn.textContent = "جارِ الدخول…";
+
+  const { error } = await signInWithPin(email, pin);
+
+  if (error) {
+    errorEl.classList.add("show");
+    submitBtn.disabled = false;
+    submitBtn.textContent = "دخول";
+    return;
+  }
+  window.location.href = "dashboard.html";
+});
+</script>
+</body>
+</html>
