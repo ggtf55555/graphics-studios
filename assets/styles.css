@@ -168,16 +168,24 @@ a { color: inherit; }
   position: absolute;
   inset: 0;
   z-index: 0;
-  background: transparent center 32%/cover no-repeat;
+  overflow: hidden;
   opacity: 0.32;
-  animation: hero-kenburns 26s ease-in-out infinite alternate;
 }
 
-.hero-bg.no-image {
-  background:
-    radial-gradient(ellipse 1100px 650px at 78% 8%, rgba(201, 162, 75, 0.14), transparent 58%),
-    radial-gradient(ellipse 900px 600px at 12% 95%, rgba(63, 167, 160, 0.12), transparent 60%),
-    #0a0b0e;
+.hero-slide {
+  position: absolute;
+  inset: -2%;
+  background: transparent center 32%/cover no-repeat;
+  opacity: 0;
+  transition: opacity 1.4s ease;
+  will-change: opacity, transform;
+}
+
+.hero-slide.active { opacity: 1; }
+
+.hero-slide.active,
+.hero-slide.leaving {
+  animation: hero-kenburns 9s ease-out forwards;
 }
 
 @keyframes hero-kenburns {
@@ -186,7 +194,8 @@ a { color: inherit; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-bg { animation: none; }
+  .hero-slide.active,
+  .hero-slide.leaving { animation: none; }
 }
 
 .hero-scrim {
@@ -1416,3 +1425,32 @@ a { color: inherit; }
 
 .tm-photo-msg { font-size: 0.78rem; color: var(--text-faint); }
 .tm-photo-msg.err { color: var(--danger); }
+
+/* ---- admin task filters ---- */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  margin: 0 0 12px;
+  padding: 14px;
+  border: 1px solid var(--bezel);
+  border-radius: 12px;
+  background: rgba(14, 15, 18, 0.55);
+}
+.filter-field { display: flex; flex-direction: column; gap: 5px; min-width: 130px; }
+.filter-field label { font-size: 0.78rem; color: var(--text-muted); }
+.filter-field select, .filter-field input { min-height: 38px; }
+.filter-summary { margin: 0 0 14px; font-size: 0.86rem; color: var(--text-muted); }
+
+/* ---- designer history ---- */
+.history-section { margin-top: 38px; padding-top: 24px; border-top: 1px solid rgba(255,255,255,0.08); }
+.history-count { font-size: 0.9rem; color: var(--gold); font-weight: 500; }
+.history-month { margin: 18px 0 6px; font-size: 0.86rem; color: var(--gold); font-weight: 600; }
+.history-card { opacity: 0.94; }
+
+/* ---- team PIN change ---- */
+.tm-pin { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; padding-top: 6px; }
+.tm-pin-input { width: 150px; direction: ltr; text-align: center; letter-spacing: 0.3em; }
+.tm-pin-msg { font-size: 0.8rem; color: var(--teal); }
+.tm-pin-msg.err { color: #e0735f; }
