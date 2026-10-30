@@ -40,6 +40,8 @@
         <button class="btn admin-tab active" data-tab="tab-new">مهمة جديدة</button>
         <button class="btn admin-tab" data-tab="tab-all">كل المهام</button>
         <button class="btn admin-tab" data-tab="tab-stats">سجل الأداء</button>
+        <button class="btn admin-tab" data-tab="tab-studios">الاستوديوهات</button>
+        <button class="btn admin-tab" data-tab="tab-team">الفريق</button>
       </div>
 
       <section id="tab-new" class="admin-panel">
@@ -93,6 +95,50 @@
       <section id="tab-stats" class="admin-panel" style="display:none">
         <h2 style="margin-bottom:16px">سجل أداء الفريق</h2>
         <div class="stats-grid" id="stats-grid"></div>
+      </section>
+
+      <section id="tab-studios" class="admin-panel" style="display:none">
+        <div class="list-toolbar">
+          <h2>معرض الاستوديوهات بالواجهة الرئيسية</h2>
+          <button class="btn btn-sm" id="studio-add-toggle">+ إضافة استوديو</button>
+        </div>
+
+        <div class="panel studio-edit-form open" id="studio-add-form" style="display:none; margin-bottom:18px">
+          <div class="field">
+            <label for="sa-name">اسم الاستوديو</label>
+            <input id="sa-name" type="text" required />
+          </div>
+          <div class="field">
+            <label for="sa-type">التصنيف</label>
+            <input id="sa-type" type="text" placeholder="مثال: إخباري" />
+          </div>
+          <div class="field">
+            <label for="sa-topic">الموضوع</label>
+            <input id="sa-topic" type="text" placeholder="مثال: حواري · فرح" />
+          </div>
+          <div class="field">
+            <label for="sa-program">اسم البرنامج (اختياري)</label>
+            <input id="sa-program" type="text" />
+          </div>
+          <div class="field field-full">
+            <label for="sa-image">رابط الصورة (اختياري)</label>
+            <input id="sa-image" type="text" placeholder="https://…" />
+          </div>
+          <p class="error" id="sa-error">تعذّر إضافة الاستوديو. تأكد من إدخال الاسم.</p>
+          <div class="studio-edit-form-actions">
+            <button class="btn btn-gold" id="sa-submit">إضافة</button>
+            <button class="btn btn-sm" id="sa-cancel" type="button">إلغاء</button>
+          </div>
+        </div>
+
+        <div class="studio-admin-list" id="studios-admin-list"></div>
+        <p id="studios-admin-empty" style="display:none;color:var(--text-muted)">لا توجد استوديوهات بعد.</p>
+      </section>
+
+      <section id="tab-team" class="admin-panel" style="display:none">
+        <h2 style="margin-bottom:8px">إدارة الفريق</h2>
+        <p class="hint" style="margin:0 0 18px">تعديل الاسم الظاهر لأي عضو يُحدّث اسمه فوراً في صفحة الدخول ولوحة المهام. الحسابات الاحتياطية (غير مفعّلة) يمكن تفعيلها وتسميتها باسم عضو جديد بدل إنشاء حساب دخول من جديد.</p>
+        <div class="team-list" id="team-admin-list"></div>
       </section>
 
     </div>
@@ -473,6 +519,239 @@ async function loadStats() {
   }).join("");
 }
 
+// ---------------- admin: studios gallery management ----------------
+let pipelineStagesCache = null;
+
+async function loadPipelineStages() {
+  if (pipelineStagesCache) return pipelineStagesCache;
+  const { data } = await sb.from("pipeline_stages").select("id, name, sort_order").order("sort_order");
+  pipelineStagesCache = data || [];
+  return pipelineStagesCache;
+}
+
+async function loadStudiosAdmin() {
+  const list = document.getElementById("studios-admin-list");
+  const emptyMsg = document.getElementById("studios-admin-empty");
+
+  const [stages, { data: studios, error: e1 }, { data: stageStatus, error: e2 }] = await Promise.all([
+    loadPipelineStages(),
+    sb.from("studios").select("*").order("sort_order"),
+    sb.from("studio_stage_status").select("id, studio_id, stage_id, status"),
+  ]);
+
+  if (e1 || e2 || !studios) {
+    list.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات.</p>`;
+    return;
+  }
+  if (studios.length === 0) {
+    list.innerHTML = "";
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  list.innerHTML = "";
+  studios.forEach((studio) => {
+    const rows = stageStatus.filter((r) => r.studio_id === studio.id);
+    list.appendChild(renderStudioAdminCard(studio, stages, rows));
+  });
+}
+
+function renderStudioAdminCard(studio, stages, stageRows) {
+  const statusByStage = Object.fromEntries(stageRows.map((r) => [r.stage_id, r.status]));
+  const doneCount = stages.filter((s) => statusByStage[s.id] === "مكتملة").length;
+  const metaParts = [studio.type, studio.topic].filter(Boolean);
+
+  const card = document.createElement("article");
+  card.className = "studio-admin-card";
+  card.innerHTML = `
+    <div class="studio-admin-top">
+      <div>
+        <div class="studio-admin-name">${escapeHtml(studio.name)}</div>
+        ${metaParts.length ? `<div class="studio-admin-meta">${escapeHtml(metaParts.join(" · "))}</div>` : ""}
+        <div class="studio-admin-meta">${doneCount} من ${stages.length} مراحل مكتملة</div>
+      </div>
+      <div class="studio-admin-actions">
+        <button class="btn btn-sm studio-stages-toggle">مراحل الإنتاج</button>
+        <button class="btn btn-sm studio-edit-toggle">تعديل</button>
+        <button class="btn btn-sm studio-delete-btn">حذف</button>
+      </div>
+    </div>
+
+    <div class="studio-edit-form">
+      <div class="field">
+        <label>اسم الاستوديو</label>
+        <input type="text" class="se-name" value="${escapeHtml(studio.name)}" />
+      </div>
+      <div class="field">
+        <label>التصنيف</label>
+        <input type="text" class="se-type" value="${escapeHtml(studio.type || "")}" />
+      </div>
+      <div class="field">
+        <label>الموضوع</label>
+        <input type="text" class="se-topic" value="${escapeHtml(studio.topic || "")}" />
+      </div>
+      <div class="field">
+        <label>اسم البرنامج</label>
+        <input type="text" class="se-program" value="${escapeHtml(studio.program_name || "")}" />
+      </div>
+      <div class="field field-full">
+        <label>رابط الصورة</label>
+        <input type="text" class="se-image" value="${escapeHtml(studio.image_url || "")}" />
+      </div>
+      <div class="field">
+        <label>ترتيب الظهور</label>
+        <input type="text" inputmode="numeric" class="se-sort" value="${studio.sort_order ?? 0}" />
+      </div>
+      <div class="studio-edit-form-actions">
+        <button class="btn btn-gold btn-sm studio-save-btn">حفظ التعديلات</button>
+      </div>
+    </div>
+
+    <div class="stage-editor">
+      ${stages.map((s) => `
+        <div class="stage-row" data-stage-id="${s.id}">
+          <span class="stage-row-name">${s.sort_order}. ${escapeHtml(s.name)}</span>
+          <select class="stage-row-select">
+            <option value="لم تبدأ" ${!statusByStage[s.id] || statusByStage[s.id] === "لم تبدأ" ? "selected" : ""}>لم تبدأ</option>
+            <option value="قيد التنفيذ" ${statusByStage[s.id] === "قيد التنفيذ" ? "selected" : ""}>قيد التنفيذ</option>
+            <option value="مكتملة" ${statusByStage[s.id] === "مكتملة" ? "selected" : ""}>مكتملة</option>
+          </select>
+        </div>
+      `).join("")}
+    </div>
+  `;
+
+  card.querySelector(".studio-edit-toggle").addEventListener("click", () => {
+    card.querySelector(".studio-edit-form").classList.toggle("open");
+  });
+
+  card.querySelector(".studio-stages-toggle").addEventListener("click", () => {
+    card.querySelector(".stage-editor").classList.toggle("open");
+  });
+
+  card.querySelector(".studio-save-btn").addEventListener("click", async () => {
+    const payload = {
+      name: card.querySelector(".se-name").value.trim(),
+      type: card.querySelector(".se-type").value.trim() || null,
+      topic: card.querySelector(".se-topic").value.trim() || null,
+      program_name: card.querySelector(".se-program").value.trim() || null,
+      image_url: card.querySelector(".se-image").value.trim() || null,
+      sort_order: parseInt(card.querySelector(".se-sort").value, 10) || 0,
+    };
+    if (!payload.name) return;
+    const { error } = await sb.from("studios").update(payload).eq("id", studio.id);
+    if (!error) loadStudiosAdmin();
+  });
+
+  card.querySelector(".studio-delete-btn").addEventListener("click", async () => {
+    if (!confirm(`حذف استوديو "${studio.name}" نهانياً؟ سيتم حذف كل مراحله المرتبطة.`)) return;
+    const { error } = await sb.from("studios").delete().eq("id", studio.id);
+    if (error) {
+      alert("تعذّر حذف الاستوديو. قد توجد مهام مرتبطة به.");
+      return;
+    }
+    loadStudiosAdmin();
+  });
+
+  card.querySelectorAll(".stage-row-select").forEach((sel) => {
+    sel.addEventListener("change", async () => {
+      const stageId = sel.closest(".stage-row").dataset.stageId;
+      await sb.from("studio_stage_status").upsert(
+        { studio_id: studio.id, stage_id: stageId, status: sel.value, updated_at: new Date().toISOString() },
+        { onConflict: "studio_id,stage_id" }
+      );
+      loadStudiosAdmin();
+    });
+  });
+
+  return card;
+}
+
+function setupStudioAddForm() {
+  const toggleBtn = document.getElementById("studio-add-toggle");
+  const form = document.getElementById("studio-add-form");
+  const cancelBtn = document.getElementById("sa-cancel");
+  const submitBtn = document.getElementById("sa-submit");
+  const errorEl = document.getElementById("sa-error");
+
+  toggleBtn.addEventListener("click", () => {
+    form.style.display = form.style.display === "none" ? "grid" : "none";
+  });
+  cancelBtn.addEventListener("click", () => { form.style.display = "none"; });
+
+  submitBtn.addEventListener("click", async () => {
+    errorEl.classList.remove("show");
+    const name = document.getElementById("sa-name").value.trim();
+    if (!name) { errorEl.classList.add("show"); return; }
+
+    const { data: existing } = await sb.from("studios").select("sort_order").order("sort_order", { ascending: false }).limit(1);
+    const nextSort = existing && existing.length ? (existing[0].sort_order || 0) + 1 : 1;
+
+    const payload = {
+      name,
+      type: document.getElementById("sa-type").value.trim() || null,
+      topic: document.getElementById("sa-topic").value.trim() || null,
+      program_name: document.getElementById("sa-program").value.trim() || null,
+      image_url: document.getElementById("sa-image").value.trim() || null,
+      sort_order: nextSort,
+    };
+
+    const { data: inserted, error } = await sb.from("studios").insert(payload).select().single();
+    if (error || !inserted) { errorEl.classList.add("show"); return; }
+
+    const stages = await loadPipelineStages();
+    if (stages.length) {
+      await sb.from("studio_stage_status").insert(
+        stages.map((s) => ({ studio_id: inserted.id, stage_id: s.id, status: "لم تبدأ" }))
+      );
+    }
+
+    document.getElementById("sa-name").value = "";
+    document.getElementById("sa-type").value = "";
+    document.getElementById("sa-topic").value = "";
+    document.getElementById("sa-program").value = "";
+    document.getElementById("sa-image").value = "";
+    form.style.display = "none";
+    loadStudiosAdmin();
+  });
+}
+
+// ---------------- admin: team management ----------------
+async function loadTeamAdmin() {
+  const list = document.getElementById("team-admin-list");
+  const { data, error } = await sb.from("team_accounts").select("*").order("sort_order");
+  if (error || !data) {
+    list.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل بيانات الفريق.</p>`;
+    return;
+  }
+
+  list.innerHTML = "";
+  data.forEach((member) => {
+    const row = document.createElement("div");
+    row.className = "team-row" + (member.active ? "" : " inactive");
+    row.innerHTML = `
+      <input type="text" class="tm-name" value="${escapeHtml(member.full_name)}" />
+      <span class="team-row-email">${escapeHtml(member.email)}</span>
+      <label class="team-row-active-label">
+        <input type="checkbox" class="tm-active" ${member.active ? "checked" : ""} /> مفعّل
+      </label>
+      <button class="btn btn-sm tm-save">حفظ</button>
+    `;
+    row.querySelector(".tm-save").addEventListener("click", async () => {
+      const fullName = row.querySelector(".tm-name").value.trim();
+      const active = row.querySelector(".tm-active").checked;
+      if (!fullName) return;
+      await Promise.all([
+        sb.from("team_accounts").update({ full_name: fullName, active }).eq("id", member.id),
+        sb.from("profiles").update({ full_name: fullName }).eq("id", member.profile_id),
+      ]);
+      loadTeamAdmin();
+    });
+    list.appendChild(row);
+  });
+}
+
 // ---------------- admin tabs ----------------
 function setupAdminTabs() {
   const tabs = document.querySelectorAll(".admin-tab");
@@ -484,9 +763,12 @@ function setupAdminTabs() {
       document.getElementById(tab.dataset.tab).style.display = "block";
       if (tab.dataset.tab === "tab-all") loadAllTasks();
       if (tab.dataset.tab === "tab-stats") loadStats();
+      if (tab.dataset.tab === "tab-studios") loadStudiosAdmin();
+      if (tab.dataset.tab === "tab-team") loadTeamAdmin();
     });
   });
   document.getElementById("all-filter-assignee").addEventListener("change", loadAllTasks);
+  setupStudioAddForm();
 }
 
 // ---------------- boot ----------------
