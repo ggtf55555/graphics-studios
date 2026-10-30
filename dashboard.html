@@ -25,26 +25,489 @@
 
 <main class="dash-body">
   <div class="wrap">
-    <div class="panel">
-      <h2 style="margin-bottom:10px">لوحة المهام قيد الإنشاء</h2>
-      <p style="color:var(--text-muted);max-width:56ch">
-        تسجيل الدخول يعمل. الخطوة التالية: عرض مهامك (إن كنت مصمماً) أو لوحة إدارة الفريق
-        (إن كنت من الإدارة) — بديلاً كاملاً لشيت المتابعة الحالي، مع إدخال صوتي للمهام
-        وزر نسخ المهمة المنجزة بصيغة جاهزة للصق في تطبيق المؤسسة.
-      </p>
+
+    <!-- ===================== designer view ===================== -->
+    <div id="designer-view" style="display:none">
+      <h2 style="margin-bottom:16px">مهامي</h2>
+      <div class="task-list" id="my-tasks"></div>
+      <p id="my-tasks-empty" style="display:none;color:var(--text-muted)">لا توجد مهام حالياً.</p>
     </div>
+
+    <!-- ===================== admin view ===================== -->
+    <div id="admin-view" style="display:none">
+
+      <div class="admin-tabs">
+        <button class="btn admin-tab active" data-tab="tab-new">مهمة جديدة</button>
+        <button class="btn admin-tab" data-tab="tab-all">كل المهام</button>
+        <button class="btn admin-tab" data-tab="tab-stats">سجل الأداء</button>
+      </div>
+
+      <section id="tab-new" class="admin-panel">
+        <div class="panel" style="max-width:560px">
+          <h2 style="margin-bottom:18px">إضافة مهمة جديدة</h2>
+          <form id="new-task-form">
+            <div class="field">
+              <label for="nt-studio">الاستوديو</label>
+              <select id="nt-studio" required></select>
+            </div>
+            <div class="field">
+              <label for="nt-assignee">تكليف</label>
+              <select id="nt-assignee" required></select>
+            </div>
+            <div class="field">
+              <label for="nt-type">نوع المهمة</label>
+              <select id="nt-type"></select>
+            </div>
+            <div class="field">
+              <label for="nt-desc">وصف المهمة</label>
+              <div class="voice-field">
+                <textarea id="nt-desc" rows="3" required placeholder="اكتب وصف المهمة… أو استخدم المايك"></textarea>
+                <button type="button" class="mic-btn" id="nt-mic" title="إدخال صوتي" style="display:none">🎤</button>
+              </div>
+              <p class="hint" id="nt-mic-status" style="margin:6px 0 0"></p>
+            </div>
+            <div class="field">
+              <label for="nt-due">تاريخ التسليم (اختياري)</label>
+              <input id="nt-due" type="date" />
+            </div>
+            <div class="field">
+              <label for="nt-notes">ملاحظات (اختياري)</label>
+              <textarea id="nt-notes" rows="2"></textarea>
+            </div>
+            <p class="error" id="nt-error">تعذّر إضافة المهمة. تأكد من تعبئة الحقول المطلوبة.</p>
+            <p class="ok-msg" id="nt-ok">تمت إضافة المهمة بنجاح.</p>
+            <button type="submit" class="btn btn-gold btn-block" id="nt-submit">إضافة المهمة</button>
+          </form>
+        </div>
+      </section>
+
+      <section id="tab-all" class="admin-panel" style="display:none">
+        <div class="list-toolbar">
+          <h2>كل المهام</h2>
+          <select id="all-filter-assignee"></select>
+        </div>
+        <div class="task-list" id="all-tasks"></div>
+        <p id="all-tasks-empty" style="display:none;color:var(--text-muted)">لا توجد مهام بعد.</p>
+      </section>
+
+      <section id="tab-stats" class="admin-panel" style="display:none">
+        <h2 style="margin-bottom:16px">سجل أداء الفريق</h2>
+        <div class="stats-grid" id="stats-grid"></div>
+      </section>
+
+    </div>
+
+    <div id="loading-view" class="panel">
+      <p style="color:var(--text-muted)">جارِ التحميل…</p>
+    </div>
+
   </div>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
 <script>
+const STATUS_CLASS = {
+  "مطلوب": "pill-required",
+  "قيد التنفيذ": "pill-inprogress",
+  "متأخر": "pill-late",
+  "منجز": "pill-done",
+};
+const DONE_STATUS = "منجز";
+
+function fmtDate(d) {
+  if (!d) return "";
+  try { return new Date(d).toLocaleDateString("ar-IQ-u-nu-latn", { year: "numeric", month: "short", day: "numeric" }); }
+  catch { return d; }
+}
+
+function escapeHtml(s) {
+  return (s ?? "").toString()
+    .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function copyText(text, btn) {
+  const done = () => {
+    const old = btn.textContent;
+    btn.textContent = "تم النسخ ✓";
+    setTimeout(() => { btn.textContent = old; }, 1600);
+  };
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(text).then(done).catch(() => fallbackCopy(text, done));
+  } else {
+    fallbackCopy(text, done);
+  }
+}
+
+function fallbackCopy(text, done) {
+  const ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed";
+  ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); done(); } catch {}
+  document.body.removeChild(ta);
+}
+
+function formatTaskForCopy(task, studioName) {
+  const lines = [
+    `الاستوديو: ${studioName || "—"}`,
+    task.task_type ? `النوع: ${task.task_type}` : null,
+    `المهمة: ${task.description}`,
+    `الحالة: منجز`,
+    task.completed_at ? `تاريخ الإنجاز: ${fmtDate(task.completed_at)}` : null,
+  ].filter(Boolean);
+  return lines.join("\n");
+}
+
+// ---------------- designer: my tasks ----------------
+async function loadMyTasks(userId) {
+  const container = document.getElementById("my-tasks");
+  const emptyMsg = document.getElementById("my-tasks-empty");
+
+  const [{ data: tasks, error }, { data: studios }] = await Promise.all([
+    sb.from("tasks").select("*").eq("assignee_id", userId).order("created_at", { ascending: false }),
+    sb.from("studios").select("id, name"),
+  ]);
+
+  if (error) {
+    container.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل المهام حالياً.</p>`;
+    return;
+  }
+  if (!tasks || tasks.length === 0) {
+    emptyMsg.style.display = "block";
+    return;
+  }
+
+  const studioById = Object.fromEntries((studios || []).map((s) => [s.id, s.name]));
+
+  container.innerHTML = "";
+  tasks.forEach((task) => {
+    const studioName = studioById[task.studio_id] || "—";
+    const pillClass = STATUS_CLASS[task.status] || "pill-required";
+    const card = document.createElement("article");
+    card.className = "task-card";
+    card.innerHTML = `
+      <div class="task-card-top">
+        <div>
+          <div class="task-studio">${escapeHtml(studioName)}${task.task_type ? " · " + escapeHtml(task.task_type) : ""}</div>
+          <div class="task-desc">${escapeHtml(task.description)}</div>
+        </div>
+        <span class="pill ${pillClass}">${escapeHtml(task.status)}</span>
+      </div>
+      <div class="task-meta">
+        ${task.due_date ? `<span>تسليم: ${fmtDate(task.due_date)}</span>` : ""}
+      </div>
+      <div class="notes-box">
+        <label style="font-size:0.82rem;color:var(--text-muted);display:block;margin-bottom:6px">ملاحظات</label>
+        <textarea data-task-id="${task.id}" class="notes-input" placeholder="أضف ملاحظة…">${escapeHtml(task.notes || "")}</textarea>
+      </div>
+      <div class="task-actions">
+        <select class="status-select" data-task-id="${task.id}">
+          <option value="مطلوب" ${task.status === "مطلوب" ? "selected" : ""}>مطلوب</option>
+          <option value="قيد التنفيذ" ${task.status === "قيد التنفيذ" ? "selected" : ""}>قيد التنفيذ</option>
+          <option value="متأخر" ${task.status === "متأخر" ? "selected" : ""}>متأخر</option>
+          <option value="منجز" ${task.status === "منجز" ? "selected" : ""}>منجز</option>
+        </select>
+        <button class="btn btn-sm save-notes-btn" data-task-id="${task.id}">حفظ الملاحظة</button>
+        ${task.status === DONE_STATUS ? `<button class="btn btn-sm btn-gold copy-task-btn" data-task-id="${task.id}">نسخ كنص جاهز</button>` : ""}
+      </div>
+    `;
+    container.appendChild(card);
+
+    card.querySelector(".status-select").addEventListener("change", async (e) => {
+      const newStatus = e.target.value;
+      const { error } = await sb.from("tasks").update({ status: newStatus }).eq("id", task.id);
+      if (!error) {
+        task.status = newStatus;
+        if (newStatus === DONE_STATUS) task.completed_at = new Date().toISOString();
+        loadMyTasks(userId);
+      }
+    });
+
+    card.querySelector(".save-notes-btn").addEventListener("click", async () => {
+      const notes = card.querySelector(".notes-input").value;
+      await sb.from("tasks").update({ notes }).eq("id", task.id);
+    });
+
+    const copyBtn = card.querySelector(".copy-task-btn");
+    if (copyBtn) {
+      copyBtn.addEventListener("click", () => {
+        copyText(formatTaskForCopy(task, studioName), copyBtn);
+      });
+    }
+  });
+}
+
+// ---------------- admin: lookups ----------------
+let adminLookups = null;
+
+async function loadAdminLookups() {
+  const [{ data: studios }, { data: designers }, { data: types }] = await Promise.all([
+    sb.from("studios").select("id, name").order("sort_order"),
+    sb.from("profiles").select("id, full_name").eq("role", "designer").order("full_name"),
+    sb.from("task_types").select("name").order("sort_order"),
+  ]);
+  adminLookups = { studios: studios || [], designers: designers || [], types: types || [] };
+
+  const studioSel = document.getElementById("nt-studio");
+  studioSel.innerHTML = adminLookups.studios.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
+
+  const assigneeSel = document.getElementById("nt-assignee");
+  assigneeSel.innerHTML = adminLookups.designers.map((d) => `<option value="${d.id}">${escapeHtml(d.full_name)}</option>`).join("");
+
+  const typeSel = document.getElementById("nt-type");
+  typeSel.innerHTML = adminLookups.types.map((t) => `<option value="${t.name}">${escapeHtml(t.name)}</option>`).join("");
+
+  const filterSel = document.getElementById("all-filter-assignee");
+  filterSel.innerHTML = `<option value="">كل المصممين</option>` +
+    adminLookups.designers.map((d) => `<option value="${d.id}">${escapeHtml(d.full_name)}</option>`).join("");
+}
+
+// ---------------- admin: new task form ----------------
+function setupNewTaskForm(userId) {
+  const form = document.getElementById("new-task-form");
+  const errorEl = document.getElementById("nt-error");
+  const okEl = document.getElementById("nt-ok");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorEl.classList.remove("show");
+    okEl.classList.remove("show");
+
+    const payload = {
+      studio_id: document.getElementById("nt-studio").value,
+      assignee_id: document.getElementById("nt-assignee").value,
+      task_type: document.getElementById("nt-type").value || null,
+      description: document.getElementById("nt-desc").value.trim(),
+      due_date: document.getElementById("nt-due").value || null,
+      notes: document.getElementById("nt-notes").value.trim() || null,
+      created_by: userId,
+    };
+
+    if (!payload.studio_id || !payload.assignee_id || !payload.description) {
+      errorEl.classList.add("show");
+      return;
+    }
+
+    const { error } = await sb.from("tasks").insert(payload);
+    if (error) {
+      errorEl.classList.add("show");
+      return;
+    }
+    okEl.classList.add("show");
+    form.reset();
+    setTimeout(() => okEl.classList.remove("show"), 2500);
+    loadAllTasks();
+    loadStats();
+  });
+
+  // voice input (Web Speech API) — Chrome only
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const micBtn = document.getElementById("nt-mic");
+  const micStatus = document.getElementById("nt-mic-status");
+  if (SpeechRecognition) {
+    micBtn.style.display = "inline-flex";
+    const recognition = new SpeechRecognition();
+    recognition.lang = "ar-SA";
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+    let listening = false;
+
+    recognition.addEventListener("result", (e) => {
+      const text = e.results[0][0].transcript;
+      const desc = document.getElementById("nt-desc");
+      desc.value = desc.value ? desc.value.trim() + " " + text : text;
+    });
+    recognition.addEventListener("end", () => {
+      listening = false;
+      micBtn.classList.remove("recording");
+      micStatus.textContent = "";
+    });
+    recognition.addEventListener("error", () => {
+      listening = false;
+      micBtn.classList.remove("recording");
+      micStatus.textContent = "تعذّر الاستماع، حاول مرة أخرى.";
+    });
+
+    micBtn.addEventListener("click", () => {
+      if (listening) { recognition.stop(); return; }
+      listening = true;
+      micBtn.classList.add("recording");
+      micStatus.textContent = "جارِ الاستماع… تحدث الآن";
+      recognition.start();
+    });
+  }
+}
+
+// ---------------- admin: all tasks ----------------
+async function loadAllTasks() {
+  const container = document.getElementById("all-tasks");
+  const emptyMsg = document.getElementById("all-tasks-empty");
+  const filterVal = document.getElementById("all-filter-assignee").value;
+
+  let query = sb.from("tasks").select("*").order("created_at", { ascending: false });
+  if (filterVal) query = query.eq("assignee_id", filterVal);
+  const { data: tasks, error } = await query;
+
+  if (error || !tasks) {
+    container.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل المهام.</p>`;
+    return;
+  }
+  if (tasks.length === 0) {
+    container.innerHTML = "";
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  const studioById = Object.fromEntries(adminLookups.studios.map((s) => [s.id, s.name]));
+  const designerById = Object.fromEntries(adminLookups.designers.map((d) => [d.id, d.full_name]));
+
+  container.innerHTML = "";
+  tasks.forEach((task) => {
+    const pillClass = STATUS_CLASS[task.status] || "pill-required";
+    const card = document.createElement("article");
+    card.className = "task-card";
+    card.innerHTML = `
+      <div class="task-card-top">
+        <div>
+          <div class="task-studio">${escapeHtml(studioById[task.studio_id] || "—")}${task.task_type ? " · " + escapeHtml(task.task_type) : ""} · ${escapeHtml(designerById[task.assignee_id] || "—")}</div>
+          <div class="task-desc">${escapeHtml(task.description)}</div>
+        </div>
+        <span class="pill ${pillClass}">${escapeHtml(task.status)}</span>
+      </div>
+      <div class="task-meta">
+        ${task.due_date ? `<span>تسليم: ${fmtDate(task.due_date)}</span>` : ""}
+        ${task.notes ? `<span>ملاحظة: ${escapeHtml(task.notes)}</span>` : ""}
+      </div>
+      <div class="task-actions">
+        <button class="btn btn-sm delete-task-btn" data-task-id="${task.id}">حذف</button>
+      </div>
+    `;
+    container.appendChild(card);
+
+    card.querySelector(".delete-task-btn").addEventListener("click", async () => {
+      if (!confirm("حذف هذه المهمة نهائياً؟")) return;
+      await sb.from("tasks").delete().eq("id", task.id);
+      loadAllTasks();
+      loadStats();
+    });
+  });
+}
+
+// ---------------- admin: stats (track record per designer) ----------------
+async function loadStats() {
+  const grid = document.getElementById("stats-grid");
+  const { data: tasks, error } = await sb.from("tasks").select("assignee_id, status, due_date, completed_at");
+  if (error || !tasks) {
+    grid.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الإحصائيات.</p>`;
+    return;
+  }
+
+  const byDesigner = {};
+  adminLookups.designers.forEach((d) => {
+    byDesigner[d.id] = {
+      name: d.full_name, total: 0, done: 0, late: 0, inProgress: 0,
+      onTime: 0, withDueCompleted: 0,
+    };
+  });
+  tasks.forEach((t) => {
+    const d = byDesigner[t.assignee_id];
+    if (!d) return;
+    d.total++;
+    if (t.status === "منجز") {
+      d.done++;
+      if (t.due_date && t.completed_at) {
+        d.withDueCompleted++;
+        const onTime = new Date(t.completed_at) <= new Date(t.due_date + "T23:59:59");
+        if (onTime) d.onTime++;
+      }
+    }
+    if (t.status === "متأخر") d.late++;
+    if (t.status === "قيد التنفيذ") d.inProgress++;
+  });
+
+  grid.innerHTML = Object.values(byDesigner).map((d) => {
+    const pct = d.total ? Math.round((d.done / d.total) * 100) : 0;
+    const onTimePct = d.withDueCompleted ? Math.round((d.onTime / d.withDueCompleted) * 100) : null;
+    const current = d.total - d.done;
+    return `
+      <div class="track-card">
+        <div class="track-name">${escapeHtml(d.name)}</div>
+        <div class="track-tiles">
+          <div class="track-tile">
+            <span class="track-icon gold">🏆</span>
+            <span class="track-num">${d.done}</span>
+            <span class="track-label">منجزة</span>
+          </div>
+          <div class="track-tile">
+            <span class="track-icon teal">⟳</span>
+            <span class="track-num">${d.inProgress}</span>
+            <span class="track-label">قيد التنفيذ</span>
+          </div>
+          <div class="track-tile">
+            <span class="track-icon danger">!</span>
+            <span class="track-num">${d.late}</span>
+            <span class="track-label">متأخرة</span>
+          </div>
+          <div class="track-tile">
+            <span class="track-icon">📋</span>
+            <span class="track-num">${current}</span>
+            <span class="track-label">الحمل الحالي</span>
+          </div>
+          <div class="track-tile">
+            <span class="track-icon gold">%</span>
+            <span class="track-num">${pct}%</span>
+            <span class="track-label">نسبة الإنجاز</span>
+          </div>
+          <div class="track-tile">
+            <span class="track-icon teal">⏱</span>
+            <span class="track-num">${onTimePct === null ? "—" : onTimePct + "%"}</span>
+            <span class="track-label">التسليم بالموعد</span>
+          </div>
+        </div>
+      </div>
+    `;
+  }).join("");
+}
+
+// ---------------- admin tabs ----------------
+function setupAdminTabs() {
+  const tabs = document.querySelectorAll(".admin-tab");
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      tabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      document.querySelectorAll(".admin-panel").forEach((p) => (p.style.display = "none"));
+      document.getElementById(tab.dataset.tab).style.display = "block";
+      if (tab.dataset.tab === "tab-all") loadAllTasks();
+      if (tab.dataset.tab === "tab-stats") loadStats();
+    });
+  });
+  document.getElementById("all-filter-assignee").addEventListener("change", loadAllTasks);
+}
+
+// ---------------- boot ----------------
 (async () => {
   const session = await requireSession("index.html");
   if (!session) return;
 
   const { data: profile } = await sb.from("profiles").select("full_name, role").eq("id", session.user.id).single();
   document.getElementById("who-name").textContent = profile ? profile.full_name : session.user.email;
+
+  document.getElementById("loading-view").style.display = "none";
+
+  if (profile && profile.role === "admin") {
+    document.getElementById("admin-view").style.display = "block";
+    await loadAdminLookups();
+    setupNewTaskForm(session.user.id);
+    setupAdminTabs();
+  } else {
+    document.getElementById("designer-view").style.display = "block";
+    await loadMyTasks(session.user.id);
+  }
 
   document.getElementById("signout").addEventListener("click", async () => {
     await sb.auth.signOut();
