@@ -277,6 +277,7 @@ sb.from("pipeline_stages").select("id, name, sort_order"),
 sb.from("studio_photos").select("studio_id, storage_path, sort_order").order("sort_order"),
 ]);
 
+if (studios) studios.splice(0, studios.length, ...studios.filter((s) => !s.is_internal)); // internal-task pseudo studio stays off the public page
 if (e1 || e2 || e3) {
 grid.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات حالياً.</p>`;
 return;

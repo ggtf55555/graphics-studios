@@ -57,7 +57,7 @@
 <h2 style="margin-bottom:18px">إضافة مهمة جديدة</h2>
 <form id="new-task-form">
 <div class="field">
-<label for="nt-studio">الاستوديو</label>
+<label for="nt-studio">الاستوديو (أو «مهمة داخلية» إذا لا ترتبط باستوديو)</label>
 <select id="nt-studio" required></select>
 </div>
 <div class="field">
@@ -406,11 +406,11 @@ let adminLookups = null;
 
 async function loadAdminLookups() {
 const [{ data: studios }, { data: designers }, { data: types }] = await Promise.all([
-sb.from("studios").select("id, name").order("sort_order"),
+sb.from("studios").select("id, name, is_internal").order("sort_order"),
 sb.from("profiles").select("id, full_name").eq("role", "designer").order("full_name"),
 sb.from("task_types").select("name").order("sort_order"),
 ]);
-adminLookups = { studios: studios || [], designers: designers || [], types: types || [] };
+adminLookups = { studios: (studios || []).slice().sort((a, b) => (a.is_internal ? 1 : 0) - (b.is_internal ? 1 : 0)), designers: designers || [], types: types || [] };
 
 const studioSel = document.getElementById("nt-studio");
 studioSel.innerHTML = adminLookups.studios.map((s) => `<option value="${s.id}">${escapeHtml(s.name)}</option>`).join("");
@@ -724,6 +724,7 @@ sb.from("studio_stage_status").select("id, studio_id, stage_id, status"),
 sb.from("studio_photos").select("id, studio_id, storage_path, sort_order").order("sort_order"),
 ]);
 
+if (studios) studios.splice(0, studios.length, ...studios.filter((s) => !s.is_internal));
 if (e1 || e2 || !studios) {
 list.innerHTML = `<p style="color:var(--text-muted)">تعذّر تحميل الاستوديوهات.</p>`;
 return;
