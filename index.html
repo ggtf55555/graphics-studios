@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/styles.css?v=4" />
+<link rel="stylesheet" href="assets/styles.css?v=6" />
 </head>
 <body>
 
@@ -99,6 +99,22 @@
 <button class="lightbox-nav lightbox-next" id="lightbox-next" aria-label="الصورة التالية">›</button>
 </div>
 
+<div class="member-backdrop" id="member-backdrop" aria-hidden="true">
+<div class="member-panel" role="dialog" aria-modal="true" aria-labelledby="member-name">
+<button class="member-close" id="member-close" aria-label="إغلاق">×</button>
+<div class="member-head">
+<div class="member-photo" id="member-photo"></div>
+<div class="member-titles">
+<h3 id="member-name"></h3>
+<p class="member-role" id="member-role"></p>
+<p class="member-role-en" id="member-role-en"></p>
+</div>
+</div>
+<h4 class="member-resp-title">المسؤوليات</h4>
+<ul class="member-resp" id="member-resp"></ul>
+</div>
+</div>
+
 <div class="modal-backdrop" id="login-backdrop">
 <div class="modal modal-wrap">
 <button class="close" id="close-login" aria-label="إغلاق">×</button>
@@ -121,7 +137,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
-<script src="assets/bg-dots.js?v=4"></script>
+<script src="assets/bg-dots.js?v=6"></script>
 <script>
 function handleCardImgError(img) {
 const screen = img.closest(".monitor-screen");
@@ -384,19 +400,66 @@ loadStudios();
 // ---------------- team showcase ----------------
 const AVATAR_COLORS = ["var(--gold)", "var(--teal)"];
 
+function esc(s) {
+return (s ?? "").toString().replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+const memberBackdrop = document.getElementById("member-backdrop");
+let memberTrigger = null;
+let memberHoverTimer = null;
+let memberHoverLockUntil = 0;
+const canHover = window.matchMedia && window.matchMedia("(hover: hover) and (pointer: fine)").matches;
+
+function parseResponsibilities(text) {
+return (text || "").split(/\r?\n/).map((l) => l.replace(/^[\s\-•·*◇]+/, "").trim()).filter(Boolean);
+}
+
+function openMember(m, trigger) {
+clearTimeout(memberHoverTimer);
+memberTrigger = trigger || null;
+document.getElementById("member-name").textContent = m.full_name || "";
+document.getElementById("member-role").textContent = m.roleLabel || "";
+const en = document.getElementById("member-role-en");
+en.textContent = m.role_en || "";
+en.style.display = m.role_en ? "" : "none";
+const photo = document.getElementById("member-photo");
+photo.innerHTML = m.photoUrl
+? `<img src="${esc(m.photoUrl)}" alt="${esc(m.full_name)}" onerror="this.remove()" />`
+: esc((m.full_name || "؟").trim().charAt(0));
+const list = document.getElementById("member-resp");
+const items = parseResponsibilities(m.responsibilities);
+list.innerHTML = items.length
+? items.map((t) => `<li>${esc(t)}</li>`).join("")
+: `<li class="member-resp-empty">لم تُضف المسؤوليات بعد.</li>`;
+memberBackdrop.classList.add("open");
+memberBackdrop.setAttribute("aria-hidden", "false");
+document.getElementById("member-close").focus({ preventScroll: true });
+}
+
+function closeMember() {
+if (!memberBackdrop.classList.contains("open")) return;
+memberBackdrop.classList.remove("open");
+memberBackdrop.setAttribute("aria-hidden", "true");
+memberHoverLockUntil = Date.now() + 800;
+if (memberTrigger) { try { memberTrigger.focus({ preventScroll: true }); } catch {} }
+memberTrigger = null;
+}
+
+document.getElementById("member-close").addEventListener("click", closeMember);
+memberBackdrop.addEventListener("click", (e) => { if (e.target === memberBackdrop) closeMember(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeMember(); });
+
 async function loadTeamShowcase() {
 const teamGrid = document.getElementById("team-grid");
-let { data, error } = await sb
-.from("team_accounts")
-.select("full_name, role, active, photo_path")
-.eq("active", true)
-.order("sort_order");
-if (error) {
-({ data, error } = await sb
-.from("team_accounts")
-.select("full_name, role, active")
-.eq("active", true)
-.order("sort_order"));
+const selects = [
+"full_name, role, role_en, responsibilities, active, photo_path",
+"full_name, role, active, photo_path",
+"full_name, role, active",
+];
+let data = null, error = null;
+for (const cols of selects) {
+({ data, error } = await sb.from("team_accounts").select(cols).eq("active", true).order("sort_order"));
+if (!error) break;
 }
 
 if (error || !data || !data.length) {
@@ -415,13 +478,29 @@ const photoUrl = member.photo_path ? sb.storage.from("studio-images").getPublicU
 
 const card = document.createElement("article");
 card.className = "team-card";
+card.tabIndex = 0;
+card.setAttribute("role", "button");
+card.setAttribute("aria-label", `تفاصيل ${member.full_name}`);
 card.style.animationDelay = `${i * 45}ms`;
 card.innerHTML = `
 <div class="team-card-index">${num}</div>
-<div class="team-avatar" style="background:${color}">${photoUrl ? `<img src="${photoUrl}" alt="${member.full_name}" loading="lazy" onerror="this.remove()" />` : initial}</div>
-<div class="team-name">${member.full_name}</div>
-<div class="team-role">${role}</div>
+<div class="team-avatar" style="background:${color}">${photoUrl ? `<img src="${esc(photoUrl)}" alt="${esc(member.full_name)}" loading="lazy" onerror="this.remove()" />` : esc(initial)}</div>
+<div class="team-name">${esc(member.full_name)}</div>
+<div class="team-role">${esc(role)}</div>
 `;
+const info = { ...member, roleLabel: role, photoUrl };
+card.addEventListener("click", () => openMember(info, card));
+card.addEventListener("keydown", (e) => {
+if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openMember(info, card); }
+});
+if (canHover) {
+card.addEventListener("mouseenter", () => {
+clearTimeout(memberHoverTimer);
+if (Date.now() < memberHoverLockUntil || memberBackdrop.classList.contains("open")) return;
+memberHoverTimer = setTimeout(() => openMember(info, card), 380);
+});
+card.addEventListener("mouseleave", () => clearTimeout(memberHoverTimer));
+}
 teamGrid.appendChild(card);
 });
 }

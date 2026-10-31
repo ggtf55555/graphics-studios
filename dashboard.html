@@ -9,7 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/styles.css?v=4" />
+<link rel="stylesheet" href="assets/styles.css?v=6" />
 </head>
 <body>
 
@@ -190,7 +190,7 @@
 
 <section id="tab-team" class="admin-panel" style="display:none">
 <h2 style="margin-bottom:8px">إدارة الفريق</h2>
-<p class="hint" style="margin:0 0 18px">تعديل الاسم الظاهر لأي عضو يُحدّث اسمه فوراً في صفحة الدخول ولوحة المهام. الدور يظهر في بطاقة الفريق بالواجهة الرئيسية. الحسابات الاحتياطية (غير مفعّلة) يمكن تفعيلها وتسميتها باسم عضو جديد بدل إنشاء حساب دخول من جديد. لتغيير رمز دخول أي حساب (بما فيه حساب الإدارة): اكتب 4 أرقام جديدة في خانة «رمز جديد» ثم اضغط «تغيير الرمز».</p>
+<p class="hint" style="margin:0 0 18px">تعديل الاسم الظاهر لأي عضو يُحدّث اسمه فوراً في صفحة الدخول ولوحة المهام. الدور يظهر في بطاقة الفريق بالواجهة الرئيسية، والمسمى الإنجليزي والمسؤوليات تظهر عند الضغط على بطاقة العضو أو تمرير الماوس عليها. الحسابات الاحتياطية (غير مفعّلة) يمكن تفعيلها وتسميتها باسم عضو جديد بدل إنشاء حساب دخول من جديد. لتغيير رمز دخول أي حساب (بما فيه حساب الإدارة): اكتب 4 أرقام جديدة في خانة «رمز جديد» ثم اضغط «تغيير الرمز».</p>
 <div class="team-list" id="team-admin-list"></div>
 </section>
 
@@ -205,7 +205,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
-<script src="assets/bg-dots.js?v=4"></script>
+<script src="assets/bg-dots.js?v=6"></script>
 <script>
 const STATUS_CLASS = {
 "مطلوب": "pill-required",
@@ -1022,6 +1022,17 @@ ${memberPhotoUrl ? `<button type="button" class="btn btn-sm tm-photo-remove">ح�
 <input type="checkbox" class="tm-active" ${member.active ? "checked" : ""} /> مفعّل
 </label>
 <button class="btn btn-sm tm-save">حفظ</button>
+<span class="tm-save-msg" role="status"></span>
+<div class="tm-details">
+<div>
+<label>المسمى بالإنجليزي (يظهر تحت المسمى في بطاقة التفاصيل)</label>
+<input type="text" class="tm-role-en" dir="ltr" value="${escapeHtml(member.role_en || "")}" placeholder="e.g. 3D Graphics Designer" />
+</div>
+<div>
+<label>المسؤوليات — اكتب كل مسؤولية في سطر مستقل</label>
+<textarea class="tm-resp" placeholder="النمذجة ثلاثية الأبعاد&#10;الخامات والإضاءة&#10;تجهيز العناصر للإنتاج">${escapeHtml(member.responsibilities || "")}</textarea>
+</div>
+</div>
 <div class="tm-pin">
 <input type="text" inputmode="numeric" maxlength="4" autocomplete="off" class="tm-pin-input" placeholder="رمز جديد (4 أرقام)" />
 <button type="button" class="btn btn-sm tm-pin-btn">تغيير الرمز</button>
@@ -1085,16 +1096,27 @@ pinMsg.textContent = "تم تغيير الرمز ✓";
 setTimeout(() => { pinMsg.textContent = ""; }, 3500);
 });
 
+const saveMsg = row.querySelector(".tm-save-msg");
 row.querySelector(".tm-save").addEventListener("click", async () => {
 const fullName = row.querySelector(".tm-name").value.trim();
 const role = row.querySelector(".tm-role").value.trim();
+const roleEn = row.querySelector(".tm-role-en").value.trim();
+const resp = row.querySelector(".tm-resp").value.split(/\r?\n/).map((l) => l.trim()).filter(Boolean).join("\n");
 const active = row.querySelector(".tm-active").checked;
 if (!fullName) return;
-await Promise.all([
-sb.from("team_accounts").update({ full_name: fullName, role: role || null, active }).eq("id", member.id),
+saveMsg.classList.remove("err");
+saveMsg.textContent = "جارِ الحفظ…";
+const [teamRes, profRes] = await Promise.all([
+sb.from("team_accounts").update({ full_name: fullName, role: role || null, role_en: roleEn || null, responsibilities: resp || null, active }).eq("id", member.id),
 sb.from("profiles").update({ full_name: fullName }).eq("id", member.profile_id),
 ]);
-loadTeamAdmin();
+if (teamRes.error || profRes.error) {
+saveMsg.classList.add("err");
+saveMsg.textContent = "تعذّر الحفظ.";
+return;
+}
+saveMsg.textContent = "تم الحفظ ✓";
+setTimeout(() => { saveMsg.textContent = ""; }, 3000);
 });
 list.appendChild(row);
 });
