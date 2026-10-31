@@ -738,12 +738,27 @@ return;
 }
 emptyMsg.style.display = "none";
 
+// keep each card's open panels (stages / photos / edit) and scroll position across re-renders
+const openPanels = {};
+list.querySelectorAll(".studio-admin-card").forEach((c) => {
+openPanels[c.dataset.studioId] = [".stage-editor", ".studio-photos-editor", ".studio-edit-form"].filter((sel) => {
+const el = c.querySelector(sel);
+return el && el.classList.contains("open");
+});
+});
+const scrollY = window.scrollY;
 list.innerHTML = "";
 studios.forEach((studio) => {
 const rows = stageStatus.filter((r) => r.studio_id === studio.id);
 const photos = e3 ? [] : (photoRows || []).filter((p) => p.studio_id === studio.id);
-list.appendChild(renderStudioAdminCard(studio, stages, rows, photos));
+const card = renderStudioAdminCard(studio, stages, rows, photos);
+(openPanels[studio.id] || []).forEach((sel) => {
+const el = card.querySelector(sel);
+if (el) el.classList.add("open");
 });
+list.appendChild(card);
+});
+window.scrollTo(0, scrollY);
 }
 
 function renderPhotosGridHtml(photos) {
@@ -766,6 +781,7 @@ const metaParts = [studio.type, studio.topic].filter(Boolean);
 
 const card = document.createElement("article");
 card.className = "studio-admin-card";
+card.dataset.studioId = studio.id;
 card.innerHTML = `
 <div class="studio-admin-top">
 <div>
