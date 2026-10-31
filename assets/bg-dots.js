@@ -16,7 +16,8 @@
   document.body.insertBefore(canvas, document.body.firstChild);
   var ctx = canvas.getContext("2d");
 
-  var GAP = 40;              // distance between dots
+  var S = 1;                 // UI scale (root font size / 16) so dots keep the same proportions on 4K
+  var GAP = 40;              // distance between dots (scaled)
   var BASE = [74, 62, 34];   // dim bronze
   var GLOW = [226, 186, 96]; // site gold, brightened
   var W = 0, H = 0, DPR = 1, cols = 0, rows = 0, dots = [];
@@ -29,22 +30,24 @@
   ];
 
   function resize() {
+    S = Math.max(1, (parseFloat(getComputedStyle(document.documentElement).fontSize) || 16) / 16);
     DPR = Math.min(window.devicePixelRatio || 1, 2);
     W = window.innerWidth;
     H = window.innerHeight;
     canvas.width = Math.round(W * DPR);
     canvas.height = Math.round(H * DPR);
     ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
-    cols = Math.ceil(W / GAP) + 1;
-    rows = Math.ceil(H / GAP) + 1;
-    var offX = (W - (cols - 1) * GAP) / 2;
-    var offY = (H - (rows - 1) * GAP) / 2;
+    var G = GAP * S;
+    cols = Math.ceil(W / G) + 1;
+    rows = Math.ceil(H / G) + 1;
+    var offX = (W - (cols - 1) * G) / 2;
+    var offY = (H - (rows - 1) * G) / 2;
     dots = [];
     for (var j = 0; j < rows; j++) {
       for (var i = 0; i < cols; i++) {
         dots.push({
-          x: offX + i * GAP,
-          y: offY + j * GAP,
+          x: offX + i * G,
+          y: offY + j * G,
           ph: Math.random() * Math.PI * 2,
           sp: 0.0006 + Math.random() * 0.0016
         });
@@ -75,7 +78,7 @@
     } else {
       mouse.power *= 0.94;
     }
-    var MR = 190;
+    var MR = 190 * S;
 
     for (var k = 0; k < dots.length; k++) {
       var d = dots[k];
@@ -83,7 +86,7 @@
       var glow = 0;
       for (var q = 0; q < blobs.length; q++) {
         var dx = d.x - bx[q], dy = d.y - by[q];
-        var rr = blobs[q].r;
+        var rr = blobs[q].r * S;
         glow += Math.exp(-(dx * dx + dy * dy) / (rr * rr));
       }
       if (glow > 1) glow = 1;
@@ -105,7 +108,7 @@
       var heat = Math.min(1, glow * (0.4 + 0.6 * life) * 0.9 + m * 1.6);
       var alpha = 0.16 + 0.5 * heat;
       if (glow < 0.05 && m < 0.05) alpha *= 0.55 + 0.45 * life;  // ambient flicker
-      var size = 0.55 + heat * 0.85;
+      var size = (0.55 + heat * 0.85) * S;
 
       ctx.fillStyle = "rgba(" + mix(BASE[0], GLOW[0], heat) + "," + mix(BASE[1], GLOW[1], heat) + "," + mix(BASE[2], GLOW[2], heat) + "," + alpha.toFixed(3) + ")";
       ctx.beginPath();
