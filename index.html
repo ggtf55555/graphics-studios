@@ -6,11 +6,11 @@
 <title>استوديوهات الإنتاج المرئي</title>
 <meta name="description" content="لوحة متابعة استوديوهات المرئي الإنتاج — من الفكرة حتى التسليم." />
 <link rel="manifest" href="manifest.json" />
-<meta name="theme-color" content="#0e0f12" />
+<meta name="theme-color" content="#05070b" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet" />
-<link rel="stylesheet" href="assets/styles.css?v=6" />
+<link rel="stylesheet" href="assets/styles.css?v=8" />
 </head>
 <body>
 
@@ -20,6 +20,7 @@
 <nav class="site-nav">
 <a href="#studios">الاستوديوهات</a>
 <a href="#team">الفريق</a>
+<a href="install.html">تثبيت التطبيق</a>
 </nav>
 <button class="btn" id="open-login">دخول الفريق</button>
 </div>
@@ -137,8 +138,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script src="assets/supabase-client.js"></script>
-<script src="assets/bg-dots.js?v=6"></script>
+<script src="assets/bg-dots.js?v=8"></script>
 <script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 function handleCardImgError(img) {
 const screen = img.closest(".monitor-screen");
 if (!screen) return;

@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>تثبيت التطبيق على الجهاز</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#05070b" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&family=Aref+Ruqaa:wght@400;700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="assets/styles.css?v=8" />
+</head>
+<body>
+
+<header class="dash-header">
+<div class="wrap">
+<a class="brand" href="index.html"><span class="dot"></span> استوديوهات الإنتاج</a>
+<div class="who">
+<a class="btn" href="dashboard.html">لوحة المهام</a>
+</div>
+</div>
+</header>
+
+<main class="dash-body">
+<div class="wrap install-wrap">
+<h1 class="install-title">ثبّت الموقع كتطبيق على جهازك</h1>
+<p class="install-lead">ثبّته مرة واحدة، فيظهر اختصار على سطح المكتب ويفتح تلقائياً بعد تشغيل الحاسبة، لتطّلع على مهامك دائماً.</p>
+
+<section class="panel install-card">
+<h2>الطريقة الأسرع على ويندوز</h2>
+<p>ملف صغير ينشئ اختصاراً على سطح المكتب ويجعل التطبيق يفتح تلقائياً بعد تسجيل الدخول إلى ويندوز (بعد نحو 12 ثانية حتى يتصل الإنترنت).</p>
+<ol class="install-steps">
+<li>اضغط «تنزيل ملف التثبيت» أدناه.</li>
+<li>افتح الملف المنزَّل بالنقر المزدوج.</li>
+<li>إذا ظهرت رسالة حماية من ويندوز، اختر «مزيد من المعلومات» ثم «تشغيل على أي حال».</li>
+<li>عند ظهور «Done» اضغط أي مفتاح. أعد تشغيل الحاسبة مرة للتجربة.</li>
+</ol>
+<a class="btn btn-gold" href="assets/install-windows.bat" download="install-graphics-studios.bat">تنزيل ملف التثبيت (ويندوز)</a>
+</section>
+
+<section class="panel install-card">
+<h2>من المتصفح مباشرة (Chrome أو Edge)</h2>
+<p>تعمل على ويندوز وماك ولينكس.</p>
+<ol class="install-steps">
+<li>اضغط الزر أدناه، أو من قائمة المتصفح (⋯) اختر «تثبيت» / «التطبيقات ← تثبيت هذا الموقع كتطبيق».</li>
+<li>افتح في المتصفح العنوان <code dir="ltr">edge://apps</code> (في Edge) أو <code dir="ltr">chrome://apps</code> (في Chrome).</li>
+<li>انقر بزر الفأرة الأيمن على التطبيق واختر «Start app when you sign in».</li>
+</ol>
+<button class="btn" id="pwa-install" style="display:none">تثبيت التطبيق الآن</button>
+<p class="install-note" id="pwa-note"></p>
+</section>
+
+<section class="panel install-card">
+<h2>ملاحظات</h2>
+<ul class="install-steps">
+<li>سجّل الدخول مرة واحدة برمزك، ويبقى مسجلاً على الجهاز.</li>
+<li>لإلغاء التشغيل التلقائي: اضغط <code dir="ltr">Win + R</code> واكتب <code dir="ltr">shell:startup</code> ثم احذف «Graphics Studios».</li>
+<li>الموقع نفسه لا يستطيع تشغيل نفسه عند فتح الحاسبة، لذلك يلزم تنفيذ إحدى الطريقتين مرة واحدة على كل جهاز.</li>
+</ul>
+</section>
+</div>
+</main>
+
+<script src="assets/bg-dots.js?v=8"></script>
+<script>
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+let deferredPrompt = null;
+const btn = document.getElementById("pwa-install");
+const note = document.getElementById("pwa-note");
+window.addEventListener("beforeinstallprompt", (e) => {
+e.preventDefault();
+deferredPrompt = e;
+btn.style.display = "inline-flex";
+});
+btn.addEventListener("click", async () => {
+if (!deferredPrompt) return;
+deferredPrompt.prompt();
+await deferredPrompt.userChoice;
+deferredPrompt = null;
+btn.style.display = "none";
+});
+window.addEventListener("appinstalled", () => { note.textContent = "تم التثبيت. أكمل الخطوتين 2 و3 لتفعيل التشغيل التلقائي."; });
+if (window.matchMedia("(display-mode: standalone)").matches) note.textContent = "التطبيق مثبّت ويعمل الآن كتطبيق مستقل.";
+</script>
+</body>
+</html>
