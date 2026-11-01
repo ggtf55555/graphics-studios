@@ -137,10 +137,14 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="assets/supabase-client.js"></script>
+<script src="assets/supabase-client.js?v=9"></script>
 <script src="assets/bg-dots.js?v=8"></script>
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
+// Already signed in on this device? Installed app windows go straight to the dashboard.
+if (window.matchMedia("(display-mode: standalone)").matches) {
+sb.auth.getSession().then(({ data }) => { if (data.session) window.location.replace("dashboard.html"); });
+}
 function handleCardImgError(img) {
 const screen = img.closest(".monitor-screen");
 if (!screen) return;

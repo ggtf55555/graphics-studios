@@ -18,6 +18,7 @@
 <a class="brand" href="index.html"><span class="dot"></span> استوديوهات الإنتاج</a>
 <div class="who">
 <span>مرحباً، <strong id="who-name">…</strong></span>
+<button class="btn btn-gold" id="enable-push" style="display:none">تفعيل الإشعارات</button>
 <a class="btn header-install" href="install.html">تثبيت التطبيق</a>
 <button class="btn" id="signout">تسجيل الخروج</button>
 </div>
@@ -205,7 +206,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="assets/supabase-client.js"></script>
+<script src="assets/supabase-client.js?v=9"></script>
 <script src="assets/bg-dots.js?v=8"></script>
 <script>
 if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
@@ -1180,11 +1181,50 @@ document.getElementById("designer-view").style.display = "block";
 await loadMyTasks(session.user.id);
 }
 
+if (typeof pushSupported === "function") setupPushButton();
+
 document.getElementById("signout").addEventListener("click", async () => {
+if (typeof disablePushOnDevice === "function") await disablePushOnDevice();
 await sb.auth.signOut();
 window.location.href = "index.html";
 });
 })();
+
+// ---------------- push notifications button ----------------
+async function setupPushButton() {
+const btn = document.getElementById("enable-push");
+if (!btn) return;
+const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+if (!pushSupported()) {
+// e.g. iPhone Safari tab: push only works after "Add to Home Screen"
+btn.style.display = "";
+btn.addEventListener("click", () => {
+alert(isIos
+? "على الآيفون: اضغط زر المشاركة ثم «إضافة إلى الشاشة الرئيسية»، وافتح الموقع من الأيقونة، ثم اضغط «تفعيل الإشعارات»."
+: "هذا المتصفح لا يدعم الإشعارات. استخدم Chrome أو Edge.");
+});
+return;
+}
+if (Notification.permission === "granted") {
+try { await syncPushSubscription(); } catch (e) { /* retry on next load */ }
+return;
+}
+btn.style.display = "";
+btn.addEventListener("click", async () => {
+if (Notification.permission === "denied") {
+alert("الإشعارات محظورة لهذا الموقع. اضغط أيقونة القفل بجانب العنوان ← الإشعارات ← السماح، ثم أعد تحميل الصفحة.");
+return;
+}
+btn.disabled = true;
+try {
+const ok = await enablePush();
+if (ok) btn.style.display = "none";
+} catch (e) {
+alert("تعذّر تفعيل الإشعارات على هذا الجهاز.");
+}
+btn.disabled = false;
+});
+}
 </script>
 </body>
 </html>
